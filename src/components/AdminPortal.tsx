@@ -1045,7 +1045,7 @@ export default function AdminPortal({
               initial={{ opacity: 0, scale: 0.95, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 30 }}
-              className="relative bg-[#0F2557] rounded-3xl overflow-y-auto md:overflow-hidden shadow-2xl max-w-7xl md:w-[95vw] w-full z-10 border border-[#D4A017]/30 flex flex-col max-h-[90vh] text-white"
+              className="relative bg-[#0F2557] rounded-3xl overflow-y-auto md:overflow-hidden shadow-2xl max-w-7xl md:w-[95vw] w-full z-10 border border-[#D4A017]/30 flex flex-col max-h-[90vh] text-white scrollbar-thin scrollbar-thumb-white/10 [WebkitOverflowScrolling:touch]"
             >
               {/* HEADER */}
               <div className="p-6 md:p-8 bg-[#050E22]/80 border-b border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shrink-0">
@@ -1185,10 +1185,10 @@ export default function AdminPortal({
                 </div>
               ) : (
                 /* AUTHENTICATED PANEL WRAPPER */
-                <div className="flex-grow flex flex-col md:flex-row overflow-hidden min-h-[60vh] md:h-[70vh]">
+                <div className="flex-grow flex flex-col md:flex-row overflow-y-visible md:overflow-hidden min-h-[60vh] md:h-[70vh]">
                   
                   {/* SIDEBAR TABS NAV */}
-                  <div className={`w-full md:w-64 bg-[#050E22]/60 border-r border-white/5 p-4 flex flex-col justify-between shrink-0 overflow-y-auto ${mobileShowSidebar ? 'flex' : 'hidden md:flex'}`}>
+                  <div className={`w-full md:w-64 bg-[#050E22]/60 border-r border-white/5 p-4 flex flex-col justify-between shrink-0 overflow-y-visible md:overflow-y-auto ${mobileShowSidebar ? 'flex' : 'hidden md:flex'}`}>
                     <div className="space-y-6">
                       {/* Mobile Title for Sidebar */}
                       <div className="md:hidden flex items-center justify-between border-b border-white/5 pb-3">
@@ -1272,7 +1272,7 @@ export default function AdminPortal({
                   </div>
 
                   {/* MAIN PANEL CONTENT VIEWS */}
-                  <div className={`flex-grow p-6 md:p-8 overflow-y-auto bg-[#0A193F] ${!mobileShowSidebar ? 'block' : 'hidden md:block'}`}>
+                  <div className={`flex-grow p-6 md:p-8 overflow-y-visible md:overflow-y-auto bg-[#0A193F] ${!mobileShowSidebar ? 'block' : 'hidden md:block'}`}>
                     {/* MOBILE TOP NAVIGATION BAR */}
                     <div className="md:hidden flex items-center justify-between bg-[#050E22]/60 border-b border-white/5 p-4 -mx-6 -mt-6 mb-6">
                       <button
@@ -2524,7 +2524,7 @@ export default function AdminPortal({
                         </div>
 
                         {/* RIGHT PANEL: CURRENT ADMINS LIST */}
-                        <div className="w-full md:w-1/2 flex flex-col bg-[#050E22]/20 border border-white/5 p-6 rounded-2xl overflow-y-auto">
+                        <div className="w-full md:w-1/2 flex flex-col bg-[#050E22]/20 border border-white/5 p-6 rounded-2xl overflow-y-visible md:overflow-y-auto">
                           <div className="flex items-center justify-between mb-4 shrink-0">
                             <div className="flex items-center gap-2">
                               <Shield className="w-5 h-5 text-[#D4A017]" />
@@ -2532,7 +2532,7 @@ export default function AdminPortal({
                             </div>
                           </div>
 
-                          <div className="space-y-3 flex-grow overflow-y-auto">
+                          <div className="space-y-3 flex-grow overflow-y-visible md:overflow-y-auto">
                             {/* Super Admin Immutable */}
                             <div className="bg-[#050E22]/50 border-2 border-[#D4A017]/30 rounded-xl p-4 flex items-center justify-between">
                               <div>
@@ -2573,7 +2573,7 @@ export default function AdminPortal({
                     )}
 
                     {activeTab === 'settings' && (
-                      <div className="flex-grow flex flex-col lg:flex-row gap-6 overflow-y-auto h-full pr-1 pb-12 min-h-0">
+                      <div className="flex-grow flex flex-col lg:flex-row gap-6 overflow-y-visible md:overflow-y-auto h-full pr-1 pb-12 min-h-0">
                         {/* LEFT COLUMN: CUSTOMIZERS */}
                         <div className="w-full lg:w-7/12 space-y-6">
                           
@@ -2959,7 +2959,7 @@ export default function AdminPortal({
 
                     {/* 10. CUSTOM SECTION MANAGER */}
                     {activeTab === 'custom_sections' && (
-                      <div className="flex-grow flex flex-col gap-6 overflow-y-auto h-full pr-1 pb-12 min-h-0 text-left">
+                      <div className="flex-grow flex flex-col gap-6 overflow-y-visible md:overflow-y-auto h-full pr-1 pb-12 min-h-0 text-left">
                         <div className="bg-[#050E22]/60 p-6 rounded-2xl border border-white/5 space-y-4">
                           <h4 className="text-base font-serif font-bold text-[#D4A017] flex items-center gap-2">
                             <Plus className="w-5 h-5" />
