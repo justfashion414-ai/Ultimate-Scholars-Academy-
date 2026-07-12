@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny-all catch-all rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ==========================================
+    // GLOBAL HELPER FUNCTIONS
+    // ==========================================
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Identifies admin using standard Google/Email token claim or admins collection lookup
+    function isAdmin() {
+      return isSignedIn() && 
+             request.auth.token.email != null && (
+               request.auth.token.email == 'justfashion414@gmail.com' ||
+               exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
+             );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-\\+\\.\\@]+$');
+    }
+
+    // ==========================================
+    // COLLECTION RULES
+    // ==========================================
+
+    // Guestbook: Publicly readable; Admin-only write
+    match /guestbook/{entryId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(entryId);
+    }
+
+    // Students: Publicly readable; Admin-only write
+    match /students/{studentId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(studentId);
+    }
+
+    // Timeline: Publicly readable; Admin-only write
+    match /timeline/{eventId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(eventId);
+    }
+
+    // Videos: Publicly readable; Admin-only write
+    match /videos/{videoId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(videoId);
+    }
+
+    // Submissions (Moderation Queue): Public write (to submit); Admin-only read/update/delete
+    match /submissions/{submissionId} {
+      allow create: if isValidId(submissionId) && 
+                    request.resource.data.keys().hasAll(['id', 'type', 'submittedAt', 'data']) &&
+                    request.resource.data.keys().size() == 4 &&
+                    request.resource.data.id is string &&
+                    request.resource.data.type is string &&
+                    request.resource.data.submittedAt is string &&
+                    request.resource.data.data is map;
+      allow read: if isAdmin();
+      allow update, delete: if isAdmin() && isValidId(submissionId);
+    }
+
+    // Admins Collection: Read-only for self/admin; Write-only for admin
+    match /admins/{email} {
+      allow read: if isSignedIn() && request.auth.token.email != null && (request.auth.token.email == email || isAdmin());
+      allow write: if isAdmin() && isValidId(email);
+    }
+
+    // Photos: Publicly readable; Admin-only write
+    match /photos/{photoId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(photoId);
+    }
+
+    // Superlatives: Publicly readable; Admin-only write
+    match /superlatives/{superlativeId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(superlativeId);
+    }
+
+    // Teacher Tributes: Publicly readable; Admin-only write
+    match /teacher_tributes/{tributeId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(tributeId);
+    }
+
+    // Settings: Publicly readable; Admin-only write
+    match /settings/{settingId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(settingId);
+    }
+
+    // Custom Sections: Publicly readable; Admin-only write
+    match /custom_sections/{sectionId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(sectionId);
+    }
+  }
+}

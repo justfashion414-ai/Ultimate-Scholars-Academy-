@@ -1,0 +1,6 @@
+{
+  "name": "Scholars Academy Graduation Album",
+  "description": "Digital graduation album for the SS3 Class of 2026 of Scholars Academy, featuring a graduand wall, superlatives, teacher tributes, memory timeline, and interactive guestbook.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,193 @@
+{
+  "entities": {
+    "guestbook": {
+      "title": "GuestbookEntry",
+      "description": "A guestbook comment submitted by a student, parent, alumni, etc.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["id", "name", "role", "message", "timestamp"]
+    },
+    "student": {
+      "title": "Student",
+      "description": "A graduand student profile.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nickname": { "type": "string" },
+        "image": { "type": "string" },
+        "favoriteMemory": { "type": "string" },
+        "messageToClassmates": { "type": "string" },
+        "aspirations": { "type": "string" },
+        "house": { "type": "string" }
+      },
+      "required": ["id", "name", "nickname", "image", "favoriteMemory", "messageToClassmates", "aspirations", "house"]
+    },
+    "timeline": {
+      "title": "TimelineEvent",
+      "description": "A memory timeline event.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "image": { "type": "string" }
+      },
+      "required": ["id", "date", "title", "description", "image"]
+    },
+    "submission": {
+      "title": "PendingSubmission",
+      "description": "A pending submission awaiting admin approval.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "submittedAt": { "type": "string" },
+        "data": { "type": "object" }
+      },
+      "required": ["id", "type", "submittedAt", "data"]
+    },
+    "video": {
+      "title": "VideoMemory",
+      "description": "A video highlight or memory from the class of 2026.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "submittedBy": { "type": "string" },
+        "role": { "type": "string" },
+        "url": { "type": "string" },
+        "thumbnailUrl": { "type": "string" },
+        "uploadedAt": { "type": "string" }
+      },
+      "required": ["id", "title", "submittedBy", "role", "url", "uploadedAt"]
+    },
+    "admin_user": {
+      "title": "AdminUser",
+      "description": "An authorized administrator email.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "addedAt": { "type": "string" },
+        "addedBy": { "type": "string" }
+      },
+      "required": ["email", "addedAt", "addedBy"]
+    },
+    "photo": {
+      "title": "Photo",
+      "description": "A high-resolution class photograph or memory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "url": { "type": "string" },
+        "title": { "type": "string" },
+        "submittedBy": { "type": "string" },
+        "role": { "type": "string" },
+        "uploadedAt": { "type": "string" }
+      },
+      "required": ["id", "url", "title", "submittedBy", "role", "uploadedAt"]
+    },
+    "superlative": {
+      "title": "Superlative",
+      "description": "A student superlative award category and winner",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "studentName": { "type": "string" },
+        "studentImage": { "type": "string" }
+      },
+      "required": ["id", "category", "description", "studentName", "studentImage"]
+    },
+    "teacher_tribute": {
+      "title": "TeacherTribute",
+      "description": "A teacher tribute message of encouragement",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "subject": { "type": "string" },
+        "image": { "type": "string" },
+        "message": { "type": "string" }
+      },
+      "required": ["id", "name", "subject", "image", "message"]
+    },
+    "custom_section": {
+      "title": "CustomSection",
+      "description": "A dynamic custom section added by the administrator",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "subtext": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "mediaType": { "type": "string" },
+        "orderIndex": { "type": "number" }
+      },
+      "required": ["id", "title", "subtext", "mediaType", "orderIndex"]
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Global settings for the graduation platform",
+      "type": "object",
+      "properties": {
+        "logoUrl": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "guestbook": {
+      "schema": "guestbook",
+      "description": "Collection of approved guestbook comments"
+    },
+    "students": {
+      "schema": "student",
+      "description": "Collection of graduating students"
+    },
+    "timeline": {
+      "schema": "timeline",
+      "description": "Collection of historical school memory milestones"
+    },
+    "submissions": {
+      "schema": "submission",
+      "description": "Collection of submissions awaiting admin review"
+    },
+    "videos": {
+      "schema": "video",
+      "description": "Collection of approved video highlights"
+    },
+    "admins": {
+      "schema": "admin_user",
+      "description": "Collection of authorized admin users mapped by email"
+    },
+    "photos": {
+      "schema": "photo",
+      "description": "Collection of approved class photo gallery memories"
+    },
+    "superlatives": {
+      "schema": "superlative",
+      "description": "Collection of dynamic superlatives and awards"
+    },
+    "teacher_tributes": {
+      "schema": "teacher_tribute",
+      "description": "Collection of dynamic teacher tributes"
+    },
+    "settings": {
+      "schema": "settings",
+      "description": "Collection of global application settings documents"
+    },
+    "custom_sections": {
+      "schema": "custom_section",
+      "description": "Collection of dynamic sections added by the administrator"
+    }
+  }
+}
