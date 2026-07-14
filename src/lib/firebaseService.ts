@@ -766,7 +766,7 @@ export async function removeAdminUser(email: string): Promise<void> {
 export async function checkIsAdmin(email: string | null | undefined): Promise<boolean> {
   if (!email) return false;
   const normalizedEmail = email.toLowerCase().trim();
-  if (normalizedEmail === "justfashion414@gmail.com") return true;
+  if (normalizedEmail === "opadijoadeniyi20@gmail.com") return true;
   try {
     const docRef = doc(db, "admins", normalizedEmail);
     const docSnap = await getDoc(docRef);

@@ -18,8 +18,10 @@ service cloud.firestore {
     // Identifies admin using standard Google/Email token claim or admins collection lookup
     function isAdmin() {
       return isSignedIn() && 
+             request.auth.token.email_verified == true &&
              request.auth.token.email != null && (
                request.auth.token.email == 'justfashion414@gmail.com' ||
+               request.auth.token.email == 'opadijoadeniyi20@gmail.com' ||
                exists(/databases/$(database)/documents/admins/$(request.auth.token.email))
              );
     }

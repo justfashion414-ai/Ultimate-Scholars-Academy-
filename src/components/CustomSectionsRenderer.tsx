@@ -128,7 +128,9 @@ export default function CustomSectionsRenderer({ sections }: CustomSectionsRende
                       {/* Polaroid Style Caption */}
                       <div className="pt-4 pb-2 px-2 text-center">
                         <p className="font-serif font-bold text-lg text-slate-900 tracking-tight">{section.title}</p>
-                        <p className="text-[10px] text-slate-400 uppercase font-mono tracking-widest mt-1">Class of 2026 Special Moment</p>
+                        <p className="text-[10px] text-slate-400 uppercase font-mono tracking-widest mt-1">
+                          {section.subLabel || 'Class of 2026 Special Moment'}
+                        </p>
                       </div>
 
                     </div>
@@ -167,7 +169,7 @@ export default function CustomSectionsRenderer({ sections }: CustomSectionsRende
                     <div className="flex-grow text-center md:text-left space-y-4">
                       <div className="space-y-1.5">
                         <span className="inline-flex items-center gap-1 px-3 py-1 rounded bg-red-500/20 text-red-300 border border-red-500/30 text-[10px] font-mono font-bold tracking-widest uppercase">
-                          <Bell className="w-3.5 h-3.5 text-red-400" /> High-Priority Notice
+                          <Bell className="w-3.5 h-3.5 text-red-400" /> {section.subLabel || 'High-Priority Notice'}
                         </span>
                         <h2 className="text-2xl md:text-3xl font-serif font-black text-white tracking-tight">
                           {section.title}
@@ -234,7 +236,7 @@ export default function CustomSectionsRenderer({ sections }: CustomSectionsRende
                 </div>
 
                 <div className="space-y-4 max-w-3xl mx-auto">
-                  <span className="text-xs font-mono tracking-widest text-[#D4A017] uppercase block">Featured Spotlights & Commendations</span>
+                  <span className="text-xs font-mono tracking-widest text-[#D4A017] uppercase block">{section.subLabel || 'Featured Spotlights & Commendations'}</span>
                   <h2 className="text-3xl md:text-5xl font-serif font-black text-white tracking-tight">
                     {section.title}
                   </h2>
@@ -306,7 +308,7 @@ export default function CustomSectionsRenderer({ sections }: CustomSectionsRende
                   <div className="space-y-4">
                     <div className={`flex items-center gap-2 ${!hasMedia && 'justify-center'}`}>
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4A017]/15 border border-[#D4A017]/30 text-[#D4A017] text-[10px] font-mono tracking-wider uppercase">
-                        <Sparkles className="w-3 h-3" /> Special Update
+                        <Sparkles className="w-3 h-3" /> {section.subLabel || 'Special Update'}
                       </span>
                     </div>
                     

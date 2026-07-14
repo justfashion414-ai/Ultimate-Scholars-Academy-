@@ -126,7 +126,7 @@ export default function TeacherTributes({
       });
 
       if (result.success) {
-        setSuccessBannerMsg("Your tribute has been submitted to the Admin Gatekeeper for review!");
+        setSuccessBannerMsg("Yes, congratulations, your upload has been successful. It will reflect soon.");
         setShowSuccessBanner(true);
         setIsSubmitModalOpen(false);
         setForm({ name: '', subject: '', message: '', image: '' });
@@ -362,7 +362,7 @@ export default function TeacherTributes({
                     <span>Send a Teacher Tribute</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    Share your congratulations, parting instructions, and blessings. Submissions go to moderation queue.
+                    Share your congratulations, parting instructions, and blessings. Uploaded items will reflect soon.
                   </p>
                 </div>
 
@@ -648,7 +648,7 @@ export default function TeacherTributes({
                   <span>Send a Teacher Tribute</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Share your congratulations, parting instructions, and blessings. Submissions go to moderation queue.
+                  Share your congratulations, parting instructions, and blessings. Uploaded items will reflect soon.
                 </p>
               </div>
 

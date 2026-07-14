@@ -167,7 +167,7 @@ export default function MemoryTimeline({
         }
         setIsAddModalOpen(false);
 
-        setSuccessBannerMsg("Your school memory has been sent to the Admin Gatekeeper! Once approved, it will be added to the timeline.");
+        setSuccessBannerMsg("Yes, congratulations, your upload has been successful. It will reflect soon.");
         setShowSuccessBanner(true);
         setTimeout(() => setShowSuccessBanner(false), 8000);
       } else {

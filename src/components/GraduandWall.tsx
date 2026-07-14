@@ -173,7 +173,7 @@ export default function GraduandWall({
                 URL.revokeObjectURL(replacementPreview);
                 setReplacementPreview('');
               }
-              setSuccessBannerMsg("Your proposed portrait replacement has been uploaded and sent to the Admin Gatekeeper for approval!");
+              setSuccessBannerMsg("Yes, congratulations, your upload has been successful. It will reflect soon.");
               setShowSuccessBanner(true);
               setSelectedStudent(null); // close student modal
               setTimeout(() => setShowSuccessBanner(false), 6000);
@@ -302,7 +302,7 @@ export default function GraduandWall({
         }
         setIsAddModalOpen(false);
 
-        setSuccessBannerMsg("Your graduand registration has been sent to the Admin Gatekeeper! Once approved, you will join the wall.");
+        setSuccessBannerMsg("Yes, congratulations, your upload has been successful. It will reflect soon.");
         setShowSuccessBanner(true);
         setTimeout(() => setShowSuccessBanner(false), 8000);
       } else {

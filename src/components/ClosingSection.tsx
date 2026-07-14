@@ -144,15 +144,6 @@ export default function ClosingSection() {
         <div className="border-t border-white/5 pt-8 text-center text-white/30 text-xs font-mono space-y-3">
           <p>© {new Date().getFullYear()} Scholars Academy, SS3 Class of 2026. All rights reserved.</p>
           <p className="mt-1">Crafted with care for the Valedictory End of Session Banquet</p>
-          <div className="pt-2 flex justify-center">
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent('trigger-admin-portal'))}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] uppercase font-mono tracking-wider font-bold text-[#D4A017]/80 hover:text-[#D4A017] border border-white/5 hover:border-[#D4A017]/20 transition-all cursor-pointer"
-            >
-              <Shield className="w-3.5 h-3.5" />
-              <span>Admin Gatekeeper Portal</span>
-            </button>
-          </div>
         </div>
 
       </div>

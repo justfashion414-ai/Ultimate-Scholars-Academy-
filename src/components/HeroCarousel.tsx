@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import { motion } from 'motion/react';
 import { Calendar, ChevronDown } from 'lucide-react';
 import { CAROUSEL_IMAGES } from '../data';
 import { subscribeSchoolLogo, subscribeActiveBannerEvent, fetchPhotos } from '../lib/firebaseService';
@@ -10,7 +10,19 @@ interface HeroCarouselProps {
 }
 
 export default function HeroCarousel({ targetDate, onViewAlbumClick }: HeroCarouselProps) {
-  const shouldReduceMotion = useReducedMotion();
+  const [shouldReduceMotion, setShouldReduceMotion] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setShouldReduceMotion(mediaQuery.matches);
+
+    const listener = (event: MediaQueryListEvent) => {
+      setShouldReduceMotion(event.matches);
+    };
+    mediaQuery.addEventListener('change', listener);
+    return () => mediaQuery.removeEventListener('change', listener);
+  }, []);
+
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [activeEventName, setActiveEventName] = useState<string | null>(null);
   const [dynamicImages, setDynamicImages] = useState<string[]>([]);

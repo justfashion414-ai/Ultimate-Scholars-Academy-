@@ -22,6 +22,7 @@ export default function AboutSchool() {
     aboutProprietorName: "Mrs. O. Okafor",
     aboutProprietorRole: "Founder / Proprietor"
   });
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     // Real-time subscription to the school setting doc in Firestore
@@ -38,8 +39,10 @@ export default function AboutSchool() {
           aboutProprietorRole: data.aboutProprietorRole !== undefined ? data.aboutProprietorRole : prev.aboutProprietorRole,
         }));
       }
+      setIsLoaded(true);
     }, (err) => {
       console.error("Error loading about school settings:", err);
+      setIsLoaded(true);
     });
 
     return () => unsubscribe();
@@ -82,18 +85,27 @@ export default function AboutSchool() {
               className="lg:col-span-5 flex flex-col items-center"
             >
               <div className="relative group w-full max-w-sm aspect-[4/5] rounded-3xl overflow-hidden border-2 border-[#D4A017]/30 shadow-2xl bg-black/20">
-                <img 
-                  src={settings.aboutImage!} 
-                  alt={settings.aboutProprietorName} 
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90" />
-                
-                <div className="absolute bottom-0 inset-x-0 p-6 text-center">
-                  <h4 className="text-white font-serif text-xl font-bold">{settings.aboutProprietorName}</h4>
-                  <p className="text-[#D4A017] font-mono text-xs mt-1 uppercase tracking-widest">{settings.aboutProprietorRole}</p>
-                </div>
+                {!isLoaded ? (
+                  <div className="w-full h-full bg-[#050E22] flex flex-col items-center justify-center p-6 animate-pulse">
+                    <div className="w-12 h-12 rounded-full border border-[#D4A017]/30 border-t-[#D4A017] animate-spin mb-3" />
+                    <p className="text-[#D4A017]/60 font-mono text-[10px] uppercase tracking-wider text-center">Loading Portrait...</p>
+                  </div>
+                ) : (
+                  <>
+                    <img 
+                      src={settings.aboutImage!} 
+                      alt={settings.aboutProprietorName} 
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90" />
+                    
+                    <div className="absolute bottom-0 inset-x-0 p-6 text-center">
+                      <h4 className="text-white font-serif text-xl font-bold">{settings.aboutProprietorName}</h4>
+                      <p className="text-[#D4A017] font-mono text-xs mt-1 uppercase tracking-widest">{settings.aboutProprietorRole}</p>
+                    </div>
+                  </>
+                )}
               </div>
             </motion.div>
           )}

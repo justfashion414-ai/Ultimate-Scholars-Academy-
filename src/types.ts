@@ -77,6 +77,7 @@ export interface CustomSection {
   orderIndex: number;
   layoutType?: 'standard' | 'birthday' | 'announcement' | 'spotlight';
   visible?: boolean;
+  subLabel?: string;
 }
 
 

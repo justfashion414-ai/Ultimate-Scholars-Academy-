@@ -220,7 +220,7 @@ export default function VideoGallery({
             });
             setSelectedFiles([]);
             setIsSubmitModalOpen(false);
-            setSuccessBannerMsg("Your graduation video highlights have been uploaded and sent to the Admin Gatekeeper for review!");
+            setSuccessBannerMsg("Yes, congratulations, your upload has been successful. It will reflect soon.");
             setShowSuccessBanner(true);
             setTimeout(() => setShowSuccessBanner(false), 8000);
           } else {
@@ -286,7 +286,7 @@ export default function VideoGallery({
           });
           setSelectedFiles([]);
           setIsSubmitModalOpen(false);
-          setSuccessBannerMsg("Your graduation video highlight has been uploaded and sent to the Admin Gatekeeper for review!");
+          setSuccessBannerMsg("Yes, congratulations, your upload has been successful. It will reflect soon.");
           setShowSuccessBanner(true);
           setTimeout(() => setShowSuccessBanner(false), 8000);
         } else {

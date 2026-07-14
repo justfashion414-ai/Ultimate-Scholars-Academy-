@@ -1,193 +1,361 @@
 {
   "entities": {
-    "guestbook": {
-      "title": "GuestbookEntry",
-      "description": "A guestbook comment submitted by a student, parent, alumni, etc.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "role": { "type": "string" },
-        "message": { "type": "string" },
-        "timestamp": { "type": "string" },
-        "imageUrl": { "type": "string" }
-      },
-      "required": ["id", "name", "role", "message", "timestamp"]
-    },
-    "student": {
+    "Student": {
       "title": "Student",
-      "description": "A graduand student profile.",
+      "description": "Information about a graduating student.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "nickname": { "type": "string" },
-        "image": { "type": "string" },
-        "favoriteMemory": { "type": "string" },
-        "messageToClassmates": { "type": "string" },
-        "aspirations": { "type": "string" },
-        "house": { "type": "string" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the student."
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the student."
+        },
+        "nickname": {
+          "type": "string",
+          "description": "Nickname or school alias."
+        },
+        "image": {
+          "type": "string",
+          "description": "URL of the student's portrait image."
+        },
+        "favoriteMemory": {
+          "type": "string",
+          "description": "Their favorite memory from school."
+        },
+        "messageToClassmates": {
+          "type": "string",
+          "description": "Farewell or inspirational message."
+        },
+        "aspirations": {
+          "type": "string",
+          "description": "Future goals or aspirations."
+        },
+        "house": {
+          "type": "string",
+          "description": "School sport or performance house name."
+        }
       },
-      "required": ["id", "name", "nickname", "image", "favoriteMemory", "messageToClassmates", "aspirations", "house"]
+      "required": ["id", "name", "nickname", "image", "favoriteMemory", "messageToClassmates"]
     },
-    "timeline": {
-      "title": "TimelineEvent",
-      "description": "A memory timeline event.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "date": { "type": "string" },
-        "title": { "type": "string" },
-        "description": { "type": "string" },
-        "image": { "type": "string" }
-      },
-      "required": ["id", "date", "title", "description", "image"]
-    },
-    "submission": {
-      "title": "PendingSubmission",
-      "description": "A pending submission awaiting admin approval.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "type": { "type": "string" },
-        "submittedAt": { "type": "string" },
-        "data": { "type": "object" }
-      },
-      "required": ["id", "type", "submittedAt", "data"]
-    },
-    "video": {
-      "title": "VideoMemory",
-      "description": "A video highlight or memory from the class of 2026.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "submittedBy": { "type": "string" },
-        "role": { "type": "string" },
-        "url": { "type": "string" },
-        "thumbnailUrl": { "type": "string" },
-        "uploadedAt": { "type": "string" }
-      },
-      "required": ["id", "title", "submittedBy", "role", "url", "uploadedAt"]
-    },
-    "admin_user": {
-      "title": "AdminUser",
-      "description": "An authorized administrator email.",
-      "type": "object",
-      "properties": {
-        "email": { "type": "string" },
-        "addedAt": { "type": "string" },
-        "addedBy": { "type": "string" }
-      },
-      "required": ["email", "addedAt", "addedBy"]
-    },
-    "photo": {
-      "title": "Photo",
-      "description": "A high-resolution class photograph or memory",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "url": { "type": "string" },
-        "title": { "type": "string" },
-        "submittedBy": { "type": "string" },
-        "role": { "type": "string" },
-        "uploadedAt": { "type": "string" }
-      },
-      "required": ["id", "url", "title", "submittedBy", "role", "uploadedAt"]
-    },
-    "superlative": {
+    "Superlative": {
       "title": "Superlative",
-      "description": "A student superlative award category and winner",
+      "description": "Award categories voted on or given to students.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "category": { "type": "string" },
-        "description": { "type": "string" },
-        "studentName": { "type": "string" },
-        "studentImage": { "type": "string" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the superlative."
+        },
+        "category": {
+          "type": "string",
+          "description": "Name of the superlative category."
+        },
+        "description": {
+          "type": "string",
+          "description": "What this category represents."
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Name of the winning student."
+        },
+        "studentImage": {
+          "type": "string",
+          "description": "Portrait image URL of the winning student."
+        }
       },
       "required": ["id", "category", "description", "studentName", "studentImage"]
     },
-    "teacher_tribute": {
+    "TeacherTribute": {
       "title": "TeacherTribute",
-      "description": "A teacher tribute message of encouragement",
+      "description": "A tribute or thank you card for a teacher.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "subject": { "type": "string" },
-        "image": { "type": "string" },
-        "message": { "type": "string" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the tribute."
+        },
+        "name": {
+          "type": "string",
+          "description": "Teacher's name."
+        },
+        "subject": {
+          "type": "string",
+          "description": "Subject taught by the teacher."
+        },
+        "image": {
+          "type": "string",
+          "description": "Image URL of the teacher."
+        },
+        "message": {
+          "type": "string",
+          "description": "Farewell/thank you message."
+        }
       },
       "required": ["id", "name", "subject", "image", "message"]
     },
-    "custom_section": {
-      "title": "CustomSection",
-      "description": "A dynamic custom section added by the administrator",
+    "TimelineEvent": {
+      "title": "TimelineEvent",
+      "description": "A major milestone event during the school year.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "subtext": { "type": "string" },
-        "mediaUrl": { "type": "string" },
-        "mediaType": { "type": "string" },
-        "orderIndex": { "type": "number" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the event."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the event."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the event."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of what occurred."
+        },
+        "image": {
+          "type": "string",
+          "description": "Event snapshot photo URL."
+        }
       },
-      "required": ["id", "title", "subtext", "mediaType", "orderIndex"]
+      "required": ["id", "date", "title", "description", "image"]
     },
-    "settings": {
-      "title": "Settings",
-      "description": "Global settings for the graduation platform",
+    "GuestbookEntry": {
+      "title": "GuestbookEntry",
+      "description": "A message left by students, parents, teachers, well-wishers.",
       "type": "object",
       "properties": {
-        "logoUrl": { "type": "string" }
-      }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the entry."
+        },
+        "name": {
+          "type": "string",
+          "description": "Visitor's name."
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of the visitor.",
+          "enum": ["Student", "Parent", "Teacher", "Alumni", "Well-wisher"]
+        },
+        "message": {
+          "type": "string",
+          "description": "Guestbook comment/well wishes."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "When the entry was posted."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Optional attached image."
+        },
+        "selectedDate": {
+          "type": "string",
+          "description": "Optional custom date selected."
+        }
+      },
+      "required": ["id", "name", "role", "message", "timestamp"]
+    },
+    "VideoMemory": {
+      "title": "VideoMemory",
+      "description": "A student-submitted video memory.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the video."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the video memory."
+        },
+        "submittedBy": {
+          "type": "string",
+          "description": "Contributor's name."
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of the contributor."
+        },
+        "url": {
+          "type": "string",
+          "description": "Video streaming/embed link."
+        },
+        "thumbnailUrl": {
+          "type": "string",
+          "description": "Optional video thumbnail image URL."
+        },
+        "uploadedAt": {
+          "type": "string",
+          "description": "Date and time of submission."
+        }
+      },
+      "required": ["id", "title", "submittedBy", "role", "url", "uploadedAt"]
+    },
+    "Photo": {
+      "title": "Photo",
+      "description": "An approved graduation photo entry in the shared gallery.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the photo."
+        },
+        "url": {
+          "type": "string",
+          "description": "Image URL on Cloudinary or static asset."
+        },
+        "title": {
+          "type": "string",
+          "description": "Brief description of the photo."
+        },
+        "submittedBy": {
+          "type": "string",
+          "description": "Name of the person who uploaded it."
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of the uploader."
+        },
+        "uploadedAt": {
+          "type": "string",
+          "description": "ISO timestamp when uploaded."
+        }
+      },
+      "required": ["id", "url", "title", "submittedBy", "role", "uploadedAt"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "An authorized administrator email address.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Normalized administrator email."
+        },
+        "addedAt": {
+          "type": "string",
+          "description": "ISO timestamp when authorized."
+        },
+        "addedBy": {
+          "type": "string",
+          "description": "Email of the admin who authorized them."
+        }
+      },
+      "required": ["email", "addedAt", "addedBy"]
+    },
+    "CustomSection": {
+      "title": "CustomSection",
+      "description": "A dynamic customizable presentation section managed by the admin.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier."
+        },
+        "title": {
+          "type": "string",
+          "description": "Section title."
+        },
+        "subtext": {
+          "type": "string",
+          "description": "Supporting copy."
+        },
+        "mediaUrl": {
+          "type": "string",
+          "description": "Optional image/video asset link."
+        },
+        "mediaType": {
+          "type": "string",
+          "enum": ["image", "video", "none"]
+        },
+        "orderIndex": {
+          "type": "integer"
+        },
+        "layoutType": {
+          "type": "string",
+          "enum": ["standard", "birthday", "announcement", "spotlight"]
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "subLabel": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "title", "subtext", "orderIndex"]
+    },
+    "PendingSubmission": {
+      "title": "PendingSubmission",
+      "description": "A contribution waiting in the moderation queue.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["guestbook", "student_add", "student_portrait_update", "timeline", "video_memory", "teacher_tribute", "photo"]
+        },
+        "submittedAt": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "required": ["id", "type", "submittedAt", "data"]
     }
   },
   "firestore": {
     "guestbook": {
-      "schema": "guestbook",
-      "description": "Collection of approved guestbook comments"
+      "schema": "GuestbookEntry",
+      "description": "Public guestbook records."
     },
     "students": {
-      "schema": "student",
-      "description": "Collection of graduating students"
+      "schema": "Student",
+      "description": "Graduating students' database profile list."
     },
     "timeline": {
-      "schema": "timeline",
-      "description": "Collection of historical school memory milestones"
-    },
-    "submissions": {
-      "schema": "submission",
-      "description": "Collection of submissions awaiting admin review"
+      "schema": "TimelineEvent",
+      "description": "Shared timeline/history events."
     },
     "videos": {
-      "schema": "video",
-      "description": "Collection of approved video highlights"
+      "schema": "VideoMemory",
+      "description": "Graduation/class dynamic video memory uploads."
+    },
+    "submissions": {
+      "schema": "PendingSubmission",
+      "description": "Moderation storage for pending items."
     },
     "admins": {
-      "schema": "admin_user",
-      "description": "Collection of authorized admin users mapped by email"
+      "schema": "AdminUser",
+      "description": "Authorized emails allowed to perform administrator functions."
     },
     "photos": {
-      "schema": "photo",
-      "description": "Collection of approved class photo gallery memories"
+      "schema": "Photo",
+      "description": "A list of shared highlight pictures."
     },
     "superlatives": {
-      "schema": "superlative",
-      "description": "Collection of dynamic superlatives and awards"
+      "schema": "Superlative",
+      "description": "Awards and titles won by pupils."
     },
     "teacher_tributes": {
-      "schema": "teacher_tribute",
-      "description": "Collection of dynamic teacher tributes"
+      "schema": "TeacherTribute",
+      "description": "Messages appreciating the tutorial staff."
     },
     "settings": {
-      "schema": "settings",
-      "description": "Collection of global application settings documents"
+      "schema": "object",
+      "description": "Global layout, order, toggles, or logo assets."
     },
     "custom_sections": {
-      "schema": "custom_section",
-      "description": "Collection of dynamic sections added by the administrator"
+      "schema": "CustomSection",
+      "description": "Dynamically added segments of content."
     }
   }
 }

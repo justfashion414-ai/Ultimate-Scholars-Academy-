@@ -323,7 +323,7 @@ export default function Guestbook({
                       className="flex items-center gap-2 p-3.5 bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs rounded-xl font-medium"
                     >
                       <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                      <span>Thank you! Your memory tribute has been submitted and is awaiting administrator approval.</span>
+                      <span>Yes, congratulations, your upload has been successful. It will reflect soon.</span>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -335,7 +335,7 @@ export default function Guestbook({
                   disabled={isSubmitting}
                   className="cursor-pointer w-full bg-[#D4A017] hover:bg-[#b0820e] text-[#0F2557] font-serif font-bold text-sm py-3 px-6 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 group border border-[#D4A017] disabled:opacity-50"
                 >
-                  <span>{isSubmitting ? 'Submitting to Moderator...' : 'Pin Memory to Board'}</span>
+                  <span>{isSubmitting ? 'Uploading...' : 'Pin Memory to Board'}</span>
                   {isSubmitting ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
