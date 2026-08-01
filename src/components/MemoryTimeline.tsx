@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { TimelineEvent } from '../types';
 import { fetchTimeline, submitToModeration, deleteApprovedTimelineEvent } from '../lib/firebaseService';
 import { compressImage } from '../lib/imageCompressor';
+import { uploadToCloudinary } from '../lib/cloudinaryService';
 
 export default function MemoryTimeline({ 
   refreshKey,
@@ -102,46 +103,8 @@ export default function MemoryTimeline({
     }
 
     setUploading(true);
-    let finalImageUrl = "";
     try {
-      // Upload portrait to Cloudinary
-      finalImageUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const rawBase64 = reader.result as string;
-          try {
-            // Compress client-side to keep under payload limit and optimize performance
-            const base64data = await compressImage(rawBase64);
-            const response = await fetch('/api/upload', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ file: base64data, filename: selectedMemoryFile.name })
-            });
-
-            const contentType = response.headers.get("content-type");
-            if (!contentType || !contentType.includes("application/json")) {
-              const textError = await response.text();
-              if (response.status === 413) {
-                reject(new Error("The image file is too large. Please select a smaller photo."));
-              } else {
-                reject(new Error(`Server error during upload (${response.status}): ${textError.substring(0, 100)}`));
-              }
-              return;
-            }
-
-            const data = await response.json();
-            if (response.ok && data.success) {
-              resolve(data.url);
-            } else {
-              reject(new Error(data.error || "Upload failed."));
-            }
-          } catch (err: any) {
-            reject(err);
-          }
-        };
-        reader.onerror = () => reject(new Error("Failed to read file."));
-        reader.readAsDataURL(selectedMemoryFile);
-      });
+      const finalImageUrl = await uploadToCloudinary(selectedMemoryFile, { filename: selectedMemoryFile.name });
 
       const submissionData = {
         title: newMemory.title.trim(),

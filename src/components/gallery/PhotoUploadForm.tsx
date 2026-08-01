@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Loader2, Camera, Plus, Check } from 'lucide-react';
 import { submitToModeration } from '../../lib/firebaseService';
 import { compressImage } from '../../lib/imageCompressor';
+import { uploadToCloudinary } from '../../lib/cloudinaryService';
 
 interface PhotoUploadFormProps {
   isOpen: boolean;
@@ -73,36 +74,8 @@ export default function PhotoUploadForm({ isOpen, onClose, onSuccess }: PhotoUpl
     try {
       const urls: string[] = [];
 
-      const uploadSingleFile = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            const rawBase64 = reader.result as string;
-            try {
-              const base64data = await compressImage(rawBase64);
-              const response = await fetch('/api/upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ file: base64data, filename: file.name }),
-              });
-
-              const data = await response.json();
-              if (response.ok && data.success) {
-                resolve(data.url);
-              } else {
-                reject(new Error(data.error || "Upload failed."));
-              }
-            } catch (err) {
-              reject(err);
-            }
-          };
-          reader.onerror = () => reject(new Error("Failed to read file."));
-          reader.readAsDataURL(file);
-        });
-      };
-
       for (let i = 0; i < selectedFiles.length; i++) {
-        const url = await uploadSingleFile(selectedFiles[i]);
+        const url = await uploadToCloudinary(selectedFiles[i], { filename: selectedFiles[i].name });
         urls.push(url);
       }
 

@@ -7,6 +7,7 @@ import { db } from '../lib/firebase';
 import { Student } from '../types';
 import { fetchStudents, submitToModeration, deleteApprovedStudent } from '../lib/firebaseService';
 import { compressImage } from '../lib/imageCompressor';
+import { uploadToCloudinary } from '../lib/cloudinaryService';
 
 export default function GraduandWall({ 
   refreshKey,
@@ -131,68 +132,31 @@ export default function GraduandWall({
     setUploadError("");
 
     try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const rawBase64 = reader.result as string;
+      const imageUrl = await uploadToCloudinary(selectedReplacementFile, { filename: selectedReplacementFile.name });
 
-        try {
-          // Compress the image client-side to prevent payload size errors and optimize speed
-          const base64data = await compressImage(rawBase64);
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              file: base64data,
-              filename: selectedReplacementFile.name
-            }),
-          });
+      // Register a pending submission with Firestore for admin review
+      const result = await submitToModeration('student_portrait_update', {
+        studentId: studentId,
+        image: imageUrl
+      });
 
-          const contentType = response.headers.get("content-type");
-          if (!contentType || !contentType.includes("application/json")) {
-            const textError = await response.text();
-            if (response.status === 413) {
-              throw new Error("The image file is too large. Please select a smaller photo.");
-            } else {
-              throw new Error(`Server error (${response.status}): ${textError.substring(0, 100)}`);
-            }
-          }
-
-          const data = await response.json();
-          if (response.ok && data.success) {
-            // Register a pending submission with Firestore for admin review
-            const result = await submitToModeration('student_portrait_update', {
-              studentId: studentId,
-              image: data.url
-            });
-
-            if (result.success) {
-              setSelectedReplacementFile(null);
-              if (replacementPreview) {
-                URL.revokeObjectURL(replacementPreview);
-                setReplacementPreview('');
-              }
-              setSuccessBannerMsg("Yes, congratulations, your upload has been successful. It will reflect soon.");
-              setShowSuccessBanner(true);
-              setSelectedStudent(null); // close student modal
-              setTimeout(() => setShowSuccessBanner(false), 6000);
-            } else {
-              setUploadError("Failed to submit portrait change request to admin.");
-            }
-          } else {
-            setUploadError(data.error || "Upload failed.");
-          }
-        } catch (err) {
-          console.error("Upload failed:", err);
-          setUploadError("Network error. Upload failed.");
-        } finally {
-          setIsSubmittingReplacement(false);
+      if (result.success) {
+        setSelectedReplacementFile(null);
+        if (replacementPreview) {
+          URL.revokeObjectURL(replacementPreview);
+          setReplacementPreview('');
         }
-      };
-      reader.readAsDataURL(selectedReplacementFile);
-    } catch (err) {
-      setUploadError("Failed to read file.");
+        setSuccessBannerMsg("Yes, congratulations, your upload has been successful. It will reflect soon.");
+        setShowSuccessBanner(true);
+        setSelectedStudent(null); // close student modal
+        setTimeout(() => setShowSuccessBanner(false), 6000);
+      } else {
+        setUploadError("Failed to submit portrait change request to admin.");
+      }
+    } catch (err: any) {
+      console.error("Upload failed:", err);
+      setUploadError(err.message || "Upload failed.");
+    } finally {
       setIsSubmittingReplacement(false);
     }
   };
@@ -231,46 +195,8 @@ export default function GraduandWall({
     }
 
     setUploading(true);
-    let finalImageUrl = "";
     try {
-      // Upload portrait to Cloudinary
-      finalImageUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const rawBase64 = reader.result as string;
-          try {
-            // Compress the image client-side to keep under payload limit and optimize performance
-            const base64data = await compressImage(rawBase64);
-            const response = await fetch('/api/upload', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ file: base64data, filename: selectedPortraitFile.name })
-            });
-
-            const contentType = response.headers.get("content-type");
-            if (!contentType || !contentType.includes("application/json")) {
-              const textError = await response.text();
-              if (response.status === 413) {
-                reject(new Error("The image file is too large. Please select a smaller photo."));
-              } else {
-                reject(new Error(`Server error during upload (${response.status}): ${textError.substring(0, 100)}`));
-              }
-              return;
-            }
-
-            const data = await response.json();
-            if (response.ok && data.success) {
-              resolve(data.url);
-            } else {
-              reject(new Error(data.error || "Upload failed."));
-            }
-          } catch (err: any) {
-            reject(err);
-          }
-        };
-        reader.onerror = () => reject(new Error("Failed to read file."));
-        reader.readAsDataURL(selectedPortraitFile);
-      });
+      const finalImageUrl = await uploadToCloudinary(selectedPortraitFile, { filename: selectedPortraitFile.name });
 
       const submissionData = {
         name: newStudent.name.trim(),

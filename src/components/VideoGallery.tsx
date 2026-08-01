@@ -4,6 +4,7 @@ import { Play, Video, Plus, X, Loader2, Check, VideoOff, Award, Film, User, Link
 import { Link } from 'react-router-dom';
 import { VideoMemory } from '../types';
 import { fetchVideos, submitToModeration, deleteApprovedVideoMemory } from '../lib/firebaseService';
+import { uploadToCloudinary } from '../lib/cloudinaryService';
 
 export default function VideoGallery({ 
   refreshKey,
@@ -113,33 +114,7 @@ export default function VideoGallery({
   };
 
   const uploadVideoFile = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64data = reader.result as string;
-        try {
-          const res = await fetch('/api/upload-video', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              file: base64data,
-              filename: file.name
-            })
-          });
-
-          const data = await res.json();
-          if (res.ok && data.success) {
-            resolve(data.url);
-          } else {
-            reject(new Error(data.error || "Failed to upload video file."));
-          }
-        } catch (err) {
-          reject(new Error("Network error during video upload."));
-        }
-      };
-      reader.onerror = () => reject(new Error("Failed to read video file."));
-      reader.readAsDataURL(file);
-    });
+    return uploadToCloudinary(file, { resourceType: 'video', filename: file.name });
   };
 
   // Submit new video to Admin Gatekeeper
@@ -178,18 +153,7 @@ export default function VideoGallery({
             } else {
               try {
                 const frameBase64 = await extractVideoFrame(file);
-                const thumbRes = await fetch('/api/upload', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    file: frameBase64,
-                    filename: `thumb-${Date.now()}.jpg`
-                  })
-                });
-                const thumbData = await thumbRes.json();
-                if (thumbRes.ok && thumbData.success) {
-                  thumbUrl = thumbData.url;
-                }
+                thumbUrl = await uploadToCloudinary(frameBase64, { filename: `thumb-${Date.now()}.jpg` });
               } catch (e) {
                 thumbUrl = "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?q=80&w=500&auto=format&fit=crop";
               }

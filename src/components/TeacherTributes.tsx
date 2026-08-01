@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { fetchTeacherTributes, deleteApprovedTeacherTribute, submitToModeration } from '../lib/firebaseService';
 import { TeacherTribute } from '../types';
 import { compressImage } from '../lib/imageCompressor';
+import { uploadToCloudinary } from '../lib/cloudinaryService';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
@@ -90,31 +91,8 @@ export default function TeacherTributes({
     let finalImageUrl = "";
     try {
       if (selectedAvatarFile) {
-        // Upload photo to Cloudinary with compression
-        finalImageUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            const rawBase64 = reader.result as string;
-            try {
-              const base64data = await compressImage(rawBase64);
-              const response = await fetch('/api/upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ file: base64data, filename: selectedAvatarFile.name }),
-              });
-              const data = await response.json();
-              if (response.ok && data.success) {
-                resolve(data.url);
-              } else {
-                reject(new Error(data.error || "Upload failed."));
-              }
-            } catch (err) {
-              reject(err);
-            }
-          };
-          reader.onerror = () => reject(new Error("Failed to read file."));
-          reader.readAsDataURL(selectedAvatarFile);
-        });
+        // Upload photo to Cloudinary
+        finalImageUrl = await uploadToCloudinary(selectedAvatarFile, { filename: selectedAvatarFile.name });
       }
 
       const result = await submitToModeration('teacher_tribute', {

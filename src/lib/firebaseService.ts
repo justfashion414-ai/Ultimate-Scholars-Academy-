@@ -12,6 +12,7 @@ import {
   onSnapshot
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
+import { deleteFromCloudinary } from "./cloudinaryService";
 import { STUDENTS_DATA, TIMELINE_DATA, PRE_POPULATED_GUESTBOOK, PRE_POPULATED_VIDEOS, PRE_POPULATED_PHOTOS, SUPERLATIVES_DATA, TEACHER_TRIBUTES_DATA } from "../data";
 import { Student, TimelineEvent, GuestbookEntry, VideoMemory, AdminUser, Photo, Superlative, TeacherTribute, CustomSection } from "../types";
 
