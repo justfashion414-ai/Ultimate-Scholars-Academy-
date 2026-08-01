@@ -3,10 +3,22 @@ import path from "path";
 import crypto from "crypto";
 import dotenv from "dotenv";
 import fs from "fs";
+import multer from "multer";
 import { createServer as createViteServer } from "vite";
 
 // Load environment variables from .env
 dotenv.config();
+
+// Configure multer memory storage and size limits based on Cloudinary standard caps
+const uploadImage = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit for images
+});
+
+const uploadVideo = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit for videos
+});
 
 // Helper to extract Cloudinary public ID from secure URL
 function getCloudinaryPublicId(url: string): string | null {
@@ -129,13 +141,18 @@ async function startServer() {
   // ==========================================
   // API ROUTE: Secure Cloudinary Image Upload
   // ==========================================
-  app.post("/api/upload", async (req: express.Request, res: express.Response): Promise<void> => {
+  app.post("/api/upload", uploadImage.single("image"), async (req: express.Request, res: express.Response): Promise<void> => {
     try {
-      const { file: rawFile, image, filename } = req.body;
-      const file = rawFile || image;
+      let filePayload: string | undefined;
 
-      if (!file) {
-        res.status(400).json({ error: "Missing 'file' or 'image' payload. Please provide a base64 string or image URL." });
+      if (req.file) {
+        filePayload = `data:${req.file.mimetype || 'image/jpeg'};base64,${req.file.buffer.toString('base64')}`;
+      } else if (req.body && (req.body.file || req.body.image)) {
+        filePayload = req.body.file || req.body.image;
+      }
+
+      if (!filePayload) {
+        res.status(400).json({ error: "Missing 'image' or 'file' payload." });
         return;
       }
 
@@ -144,9 +161,9 @@ async function startServer() {
       const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
       if (!cloudName || !apiKey || !apiSecret) {
-        // Fallback: return the file base64 data URI directly if Cloudinary is not configured
+        // Fallback: return simulated response if Cloudinary credentials are missing
         res.status(200).json({
-          url: file,
+          url: filePayload.startsWith("data:") ? filePayload : filePayload,
           success: true,
           simulated: true
         });
@@ -155,7 +172,7 @@ async function startServer() {
 
       // Generate parameters for signed upload
       const timestamp = Math.round(new Date().getTime() / 1000).toString();
-      const folder = "scholars_class_2026";
+      const folder = (req.body && req.body.folder) || "scholars_class_2026";
 
       // Cloudinary parameters sorted alphabetically
       const stringToSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
@@ -171,7 +188,7 @@ async function startServer() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          file: file,
+          file: filePayload,
           timestamp: timestamp,
           folder: folder,
           api_key: apiKey,
@@ -212,12 +229,18 @@ async function startServer() {
   // ==========================================
   // API ROUTE: Secure Cloudinary Video Upload
   // ==========================================
-  app.post("/api/upload-video", async (req: express.Request, res: express.Response): Promise<void> => {
+  app.post("/api/upload-video", uploadVideo.single("video"), async (req: express.Request, res: express.Response): Promise<void> => {
     try {
-      const { file, filename } = req.body;
+      let filePayload: string | undefined;
 
-      if (!file) {
-        res.status(400).json({ error: "Missing 'file' payload. Please provide a base64 string or video URL." });
+      if (req.file) {
+        filePayload = `data:${req.file.mimetype || 'video/mp4'};base64,${req.file.buffer.toString('base64')}`;
+      } else if (req.body && req.body.file) {
+        filePayload = req.body.file;
+      }
+
+      if (!filePayload) {
+        res.status(400).json({ error: "Missing 'video' or 'file' payload." });
         return;
       }
 
@@ -226,9 +249,8 @@ async function startServer() {
       const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
       if (!cloudName || !apiKey || !apiSecret) {
-        // Fallback or simulate upload if Cloudinary is not configured yet
         res.status(200).json({
-          url: file.startsWith("data:") ? "https://assets.mixkit.co/videos/preview/mixkit-students-studying-in-a-classroom-43183-large.mp4" : file,
+          url: filePayload.startsWith("data:") ? "https://assets.mixkit.co/videos/preview/mixkit-students-studying-in-a-classroom-43183-large.mp4" : filePayload,
           success: true,
           simulated: true
         });
@@ -236,7 +258,7 @@ async function startServer() {
       }
 
       const timestamp = Math.round(new Date().getTime() / 1000).toString();
-      const folder = "scholars_class_2026";
+      const folder = (req.body && req.body.folder) || "scholars_class_2026";
       const stringToSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
       const signature = crypto
         .createHash("sha1")
@@ -249,7 +271,7 @@ async function startServer() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          file: file,
+          file: filePayload,
           timestamp: timestamp,
           folder: folder,
           api_key: apiKey,
@@ -310,11 +332,17 @@ async function startServer() {
     }
   });
 
-  // Global Error Handler for Express and body-parser limits
+  // Global Error Handler for Express, Multer, and body-parser limits
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error("Global Express Error Caught:", err);
-    if (err.status === 413) {
-      res.status(413).json({ error: "File payload is too large! Maximum allowed is 15MB. Please choose a smaller file or compress it before uploading." });
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        res.status(413).json({ error: "File payload is too large! Maximum allowed is 10MB for images and 100MB for videos." });
+      } else {
+        res.status(400).json({ error: `Upload error: ${err.message}` });
+      }
+    } else if (err.status === 413) {
+      res.status(413).json({ error: "File payload is too large! Maximum allowed is 10MB for images and 100MB for videos." });
     } else if (err instanceof SyntaxError) {
       res.status(400).json({ error: "Invalid JSON or request payload format." });
     } else {
