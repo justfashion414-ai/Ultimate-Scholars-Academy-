@@ -347,15 +347,10 @@ export async function approveSubmission(item: PendingSubmission): Promise<void> 
       const existingStudent = studentSnap.data() as Student;
       const oldImage = existingStudent.image;
       if (oldImage && oldImage.includes("cloudinary.com")) {
-        // Try calling server route to destroy old image from Cloudinary
         try {
-          await fetch("/api/delete-cloudinary", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: oldImage })
-          });
+          await deleteFromCloudinary(oldImage);
         } catch (e) {
-          console.warn("Unable to delete old image from Cloudinary (might be client-only host)", e);
+          console.warn("Unable to delete old image from Cloudinary", e);
         }
       }
     }
@@ -438,89 +433,28 @@ export async function approveSubmission(item: PendingSubmission): Promise<void> 
 }
 
 export async function rejectSubmission(item: PendingSubmission): Promise<void> {
-  const itemData = item.data;
-  let imageUrlToDelete: string | null = null;
+  const urlsToDelete: string[] = [];
 
-  if (item.type === "guestbook") {
-    imageUrlToDelete = itemData.imageUrl || null;
-  } else if (item.type === "student_add" || item.type === "student_portrait_update" || item.type === "timeline" || item.type === "teacher_tribute") {
-    imageUrlToDelete = itemData.image || null;
-  } else if (item.type === "photo") {
-    if (itemData.urls && Array.isArray(itemData.urls)) {
-      for (const url of itemData.urls) {
-        if (url && url.includes("cloudinary.com")) {
-          try {
-            await fetch("/api/delete-cloudinary", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ url })
-            });
-          } catch (e) {
-            console.warn("Unable to delete image from Cloudinary", e);
-          }
-        }
+  const extractUrls = (val: any) => {
+    if (typeof val === 'string') {
+      if (val.includes('cloudinary.com') && !urlsToDelete.includes(val)) {
+        urlsToDelete.push(val);
       }
-    } else {
-      imageUrlToDelete = itemData.url || null;
+    } else if (Array.isArray(val)) {
+      val.forEach(extractUrls);
+    } else if (typeof val === 'object' && val !== null) {
+      Object.values(val).forEach(extractUrls);
     }
-  } else if (item.type === "video_memory") {
-    if (itemData.urls && Array.isArray(itemData.urls)) {
-      for (const url of itemData.urls) {
-        if (url && url.includes("cloudinary.com")) {
-          try {
-            await fetch("/api/delete-cloudinary", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ url })
-            });
-          } catch (e) {
-            console.warn("Unable to delete video from Cloudinary", e);
-          }
-        }
-      }
-      if (itemData.thumbnailUrls && Array.isArray(itemData.thumbnailUrls)) {
-        for (const thumb of itemData.thumbnailUrls) {
-          if (thumb && thumb.includes("cloudinary.com")) {
-            try {
-              await fetch("/api/delete-cloudinary", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url: thumb })
-              });
-            } catch (e) {
-              console.warn("Unable to delete thumbnail from Cloudinary", e);
-            }
-          }
-        }
-      }
-    } else {
-      imageUrlToDelete = itemData.url || null;
-      const thumbToDelete = itemData.thumbnailUrl || null;
-      if (thumbToDelete && thumbToDelete.includes("cloudinary.com")) {
-        try {
-          await fetch("/api/delete-cloudinary", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: thumbToDelete })
-          });
-        } catch (e) {
-          console.warn("Unable to delete thumbnail from Cloudinary", e);
-        }
-      }
-    }
+  };
+
+  if (item.data) {
+    extractUrls(item.data);
   }
 
-  // Delete from Cloudinary if image exists
-  if (imageUrlToDelete && imageUrlToDelete.includes("cloudinary.com")) {
-    try {
-      await fetch("/api/delete-cloudinary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: imageUrlToDelete })
-      });
-    } catch (e) {
-      console.warn("Unable to delete image from Cloudinary (might be client-only host)", e);
-    }
+  // Delete all Cloudinary assets associated with rejected submission
+  if (urlsToDelete.length > 0) {
+    console.log(`[Reject] Deleting ${urlsToDelete.length} Cloudinary asset(s) for rejected submission ${item.id}:`, urlsToDelete);
+    await Promise.allSettled(urlsToDelete.map((url) => deleteFromCloudinary(url)));
   }
 
   // Delete from submissions collection
@@ -535,11 +469,7 @@ export async function deleteApprovedGuestbookEntry(id: string, imageUrl?: string
   try {
     await deleteDoc(doc(db, "guestbook", id));
     if (imageUrl && imageUrl.includes("cloudinary.com")) {
-      await fetch("/api/delete-cloudinary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: imageUrl })
-      });
+      await deleteFromCloudinary(imageUrl);
     }
   } catch (err) {
     console.error("Error deleting approved guestbook entry:", err);
@@ -551,11 +481,7 @@ export async function deleteApprovedStudent(id: string, imageUrl?: string): Prom
   try {
     await deleteDoc(doc(db, "students", id));
     if (imageUrl && imageUrl.includes("cloudinary.com")) {
-      await fetch("/api/delete-cloudinary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: imageUrl })
-      });
+      await deleteFromCloudinary(imageUrl);
     }
   } catch (err) {
     console.error("Error deleting approved student:", err);
@@ -567,11 +493,7 @@ export async function deleteApprovedTimelineEvent(id: string, imageUrl?: string)
   try {
     await deleteDoc(doc(db, "timeline", id));
     if (imageUrl && imageUrl.includes("cloudinary.com")) {
-      await fetch("/api/delete-cloudinary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: imageUrl })
-      });
+      await deleteFromCloudinary(imageUrl);
     }
   } catch (err) {
     console.error("Error deleting approved timeline event:", err);
@@ -583,18 +505,10 @@ export async function deleteApprovedVideoMemory(id: string, url?: string, thumbn
   try {
     await deleteDoc(doc(db, "videos", id));
     if (url && url.includes("cloudinary.com")) {
-      await fetch("/api/delete-cloudinary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
-      });
+      await deleteFromCloudinary(url);
     }
     if (thumbnailUrl && thumbnailUrl.includes("cloudinary.com")) {
-      await fetch("/api/delete-cloudinary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: thumbnailUrl })
-      });
+      await deleteFromCloudinary(thumbnailUrl);
     }
   } catch (err) {
     console.error("Error deleting approved video memory:", err);
@@ -632,11 +546,7 @@ export async function deleteApprovedPhoto(id: string, url?: string): Promise<voi
   try {
     await deleteDoc(doc(db, "photos", id));
     if (url && url.includes("cloudinary.com")) {
-      await fetch("/api/delete-cloudinary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
-      });
+      await deleteFromCloudinary(url);
     }
   } catch (err) {
     console.error("Error deleting approved photo:", err);
@@ -673,11 +583,7 @@ export async function deleteApprovedSuperlative(id: string, studentImage?: strin
   try {
     await deleteDoc(doc(db, "superlatives", id));
     if (studentImage && studentImage.includes("cloudinary.com")) {
-      await fetch("/api/delete-cloudinary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: studentImage })
-      });
+      await deleteFromCloudinary(studentImage);
     }
   } catch (err) {
     console.error("Error deleting approved superlative:", err);
@@ -714,11 +620,7 @@ export async function deleteApprovedTeacherTribute(id: string, image?: string): 
   try {
     await deleteDoc(doc(db, "teacher_tributes", id));
     if (image && image.includes("cloudinary.com")) {
-      await fetch("/api/delete-cloudinary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: image })
-      });
+      await deleteFromCloudinary(image);
     }
   } catch (err) {
     console.error("Error deleting teacher tribute:", err);
@@ -919,11 +821,7 @@ export async function deleteApprovedCustomSection(id: string, mediaUrl?: string)
   try {
     await deleteDoc(doc(db, "custom_sections", id));
     if (mediaUrl && mediaUrl.includes("cloudinary.com")) {
-      await fetch("/api/delete-cloudinary", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: mediaUrl })
-      });
+      await deleteFromCloudinary(mediaUrl);
     }
   } catch (err) {
     console.error("Error deleting approved custom section:", err);
