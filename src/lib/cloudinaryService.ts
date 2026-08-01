@@ -235,11 +235,13 @@ export async function deleteFromCloudinary(url: string): Promise<boolean> {
       body: JSON.stringify({ url }),
     });
     const contentType = res.headers.get('content-type') || '';
-    if (res.ok && contentType.includes('application/json')) {
+    if (contentType.includes('application/json')) {
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         console.log('[Cloudinary] Delete succeeded via /api/delete-cloudinary');
         return true;
+      } else {
+        console.warn(`[Cloudinary] /api/delete-cloudinary returned status ${res.status}:`, data);
       }
     }
   } catch (err) {
@@ -254,11 +256,13 @@ export async function deleteFromCloudinary(url: string): Promise<boolean> {
       body: JSON.stringify({ url }),
     });
     const netlifyContentType = netlifyRes.headers.get('content-type') || '';
-    if (netlifyRes.ok && netlifyContentType.includes('application/json')) {
+    if (netlifyContentType.includes('application/json')) {
       const netlifyData = await netlifyRes.json();
-      if (netlifyData.success) {
+      if (netlifyRes.ok && netlifyData.success) {
         console.log('[Cloudinary] Delete succeeded via /.netlify/functions/delete-cloudinary');
         return true;
+      } else {
+        console.warn(`[Cloudinary] /.netlify/functions/delete-cloudinary returned status ${netlifyRes.status}:`, netlifyData);
       }
     }
   } catch (err) {

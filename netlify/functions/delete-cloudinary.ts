@@ -98,9 +98,9 @@ export async function handler(event: any) {
       };
     }
 
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-    const apiKey = process.env.CLOUDINARY_API_KEY;
-    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY || process.env.VITE_CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET || process.env.VITE_CLOUDINARY_API_SECRET;
 
     if (!cloudName || !apiKey || !apiSecret) {
       return {
@@ -109,11 +109,11 @@ export async function handler(event: any) {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
         },
-        body: JSON.stringify({ error: 'Missing Cloudinary credentials on server' }),
+        body: JSON.stringify({ error: 'Missing Cloudinary credentials (CLOUDINARY_CLOUD_NAME / CLOUDINARY_API_KEY / CLOUDINARY_API_SECRET or VITE_ equivalents) on Netlify server' }),
       };
     }
 
-    const isVideo = url.includes('/video/upload/');
+    const isVideo = url.includes('/video/') || url.match(/\.(mp4|mov|avi|mkv|webm)($|\?)/i) !== null;
     const resourceType = isVideo ? 'video' : 'image';
 
     const timestamp = Math.round(Date.now() / 1000).toString();
