@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { BookOpen, Award, Sparkles } from 'lucide-react';
+import { BookOpen, Award, Star } from 'lucide-react';
 
 interface AboutSchoolSettings {
   aboutTitle?: string;
@@ -142,7 +142,7 @@ export default function AboutSchool() {
 
               <div className="flex gap-3">
                 <div className="w-8 h-8 rounded-lg bg-[#D4A017]/10 flex items-center justify-center shrink-0 border border-[#D4A017]/20">
-                  <Sparkles className="w-4 h-4 text-[#D4A017]" />
+                  <Star className="w-4 h-4 text-[#D4A017]" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold font-mono text-[#D4A017] uppercase tracking-wider">Character First</h4>

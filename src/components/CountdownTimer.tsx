@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, CalendarDays } from 'lucide-react';
+import { Award, CalendarDays } from 'lucide-react';
 
 interface CountdownTimerProps {
   targetDate: string;
@@ -69,7 +69,7 @@ export default function CountdownTimer({ targetDate }: CountdownTimerProps) {
             animate={{ scale: 1, opacity: 1 }}
             className="bg-white/5 border-2 border-dashed border-[#D4A017]/40 rounded-3xl p-10 max-w-xl mx-auto shadow-2xl"
           >
-            <Sparkles className="w-12 h-12 text-[#D4A017] mx-auto mb-4 animate-bounce" />
+            <Award className="w-12 h-12 text-[#D4A017] mx-auto mb-4 animate-bounce" />
             <h3 className="text-2xl md:text-3xl font-serif font-bold text-white mb-2">
               The Day Has Arrived!
             </h3>

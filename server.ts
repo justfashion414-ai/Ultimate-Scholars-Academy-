@@ -123,7 +123,7 @@ async function deleteFromCloudinary(url: string): Promise<boolean> {
 
     const data = (await response.json()) as { result?: string; error?: any };
     console.log("Cloudinary destroy response:", data);
-    return data.result === "ok";
+    return data.result === "ok" || data.result === "not_found";
   } catch (err) {
     console.error("Cloudinary destroy API error:", err);
     return false;

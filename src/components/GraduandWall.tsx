@@ -1,6 +1,6 @@
 import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, User, Award, BookOpen, Heart, X, Sparkles, Camera, Loader2, Plus, Check, Trash2, ArrowLeft } from 'lucide-react';
+import { Search, User, Award, BookOpen, Heart, X, Star, Camera, Loader2, Plus, Check, Trash2, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -452,7 +452,7 @@ export default function GraduandWall({
                         </p>
                         {student.aspirations && (
                           <div className="text-white/60 font-mono text-[10px] uppercase tracking-wider flex items-center gap-1.5 mt-auto">
-                            <Sparkles className="w-3.5 h-3.5 text-[#D4A017]" />
+                            <Star className="w-3.5 h-3.5 text-[#D4A017]" />
                             <span>Future {student.aspirations}</span>
                           </div>
                         )}
@@ -656,7 +656,7 @@ export default function GraduandWall({
                       </span>
                       {selectedStudent.aspirations && (
                         <span className="px-3 py-1 rounded-full bg-[#D4A017]/10 border border-[#D4A017]/30 text-[#D4A017] text-[10px] font-mono uppercase tracking-wider font-semibold flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-[#D4A017]" />
+                          <Star className="w-3 h-3 text-[#D4A017]" />
                           {selectedStudent.aspirations}
                         </span>
                       )}

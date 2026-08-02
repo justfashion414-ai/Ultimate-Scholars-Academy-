@@ -19,11 +19,22 @@ export default function AdminPortal({
   setCleanUpMode = () => {}
 }: AdminPortalProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showFloatingButton, setShowFloatingButton] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('scholars_admin_session') === 'true';
   });
   const [pendingCount, setPendingCount] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Listen for 3-click logo trigger
+  useEffect(() => {
+    const handleTriggerAdmin = () => {
+      setShowFloatingButton(true);
+      setIsOpen(true);
+    };
+    window.addEventListener('trigger-admin-portal', handleTriggerAdmin);
+    return () => window.removeEventListener('trigger-admin-portal', handleTriggerAdmin);
+  }, []);
 
   // Sync Firebase authentication state
   useEffect(() => {
@@ -66,41 +77,43 @@ export default function AdminPortal({
 
   return (
     <>
-      {/* FLOATING ACTION GATEKEEPER BADGE/TRIGGER */}
-      <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-1.5">
-        {isAuthenticated && !cleanUpMode && (
-          <div className="bg-emerald-950/90 backdrop-blur text-emerald-300 border border-emerald-500/30 text-[9px] font-mono px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 font-bold uppercase tracking-wider">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-            </span>
-            <span>Admin Active</span>
-          </div>
-        )}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setIsOpen(true)}
-          className={`flex items-center gap-2 font-semibold text-xs px-4 py-3 rounded-full shadow-2xl border cursor-pointer relative font-mono tracking-wider transition-all ${
-            cleanUpMode
-              ? 'bg-rose-600 text-white border-rose-400 animate-pulse shadow-rose-600/50'
-              : 'bg-[#0F2557] hover:bg-[#15347a] text-[#D4A017] border-[#D4A017]/30 shadow-[#D4A017]/25'
-          }`}
-          id="btn-trigger-admin-portal"
-        >
-          {cleanUpMode ? (
-            <Trash2 className="w-4 h-4 text-white animate-bounce" />
-          ) : (
-            <Shield className="w-4 h-4" />
+      {/* FLOATING ACTION GATEKEEPER BADGE/TRIGGER (Only shown after clicking school logo 3 times) */}
+      {showFloatingButton && (
+        <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-1.5">
+          {isAuthenticated && !cleanUpMode && (
+            <div className="bg-emerald-950/90 backdrop-blur text-emerald-300 border border-emerald-500/30 text-[9px] font-mono px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 font-bold uppercase tracking-wider">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              </span>
+              <span>Admin Active</span>
+            </div>
           )}
-          <span>{cleanUpMode ? 'Admin Clean Up' : 'Admin Control Panel'}</span>
-          {!cleanUpMode && pendingCount > 0 && (
-            <span className="absolute -top-2 -right-1 bg-red-500 text-white font-sans text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold animate-pulse shadow-md border border-white">
-              {pendingCount}
-            </span>
-          )}
-        </motion.button>
-      </div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsOpen(true)}
+            className={`flex items-center gap-2 font-semibold text-xs px-4 py-3 rounded-full shadow-2xl border cursor-pointer relative font-mono tracking-wider transition-all ${
+              cleanUpMode
+                ? 'bg-rose-600 text-white border-rose-400 animate-pulse shadow-rose-600/50'
+                : 'bg-[#0F2557] hover:bg-[#15347a] text-[#D4A017] border-[#D4A017]/30 shadow-[#D4A017]/25'
+            }`}
+            id="btn-trigger-admin-portal"
+          >
+            {cleanUpMode ? (
+              <Trash2 className="w-4 h-4 text-white animate-bounce" />
+            ) : (
+              <Shield className="w-4 h-4" />
+            )}
+            <span>{cleanUpMode ? 'Admin Clean Up' : 'Admin Control Panel'}</span>
+            {!cleanUpMode && pendingCount > 0 && (
+              <span className="absolute -top-2 -right-1 bg-red-500 text-white font-sans text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold animate-pulse shadow-md border border-white">
+                {pendingCount}
+              </span>
+            )}
+          </motion.button>
+        </div>
+      )}
 
       <AnimatePresence>
         {isOpen && (

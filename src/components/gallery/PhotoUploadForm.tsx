@@ -97,7 +97,7 @@ export default function PhotoUploadForm({ isOpen, onClose, onSuccess }: PhotoUpl
         setUploadForm({ title: '', submittedBy: '', role: 'Student' });
         clearSelectedPhotos();
       } else {
-        setUploadError("Failed to submit photo for moderation.");
+        setUploadError("Failed to process photo upload. Please try again.");
       }
     } catch (err: any) {
       console.error(err);
@@ -141,7 +141,7 @@ export default function PhotoUploadForm({ isOpen, onClose, onSuccess }: PhotoUpl
               </div>
               <div>
                 <h3 className="text-lg font-serif font-bold text-[#0F2557]">Share a Photo Memory</h3>
-                <p className="text-[10px] text-slate-500 uppercase font-mono tracking-wider">Submissions undergo gatekeeper review</p>
+                <p className="text-[10px] text-slate-500 uppercase font-mono tracking-wider">Share your memories with the Class of 2026</p>
               </div>
             </div>
 

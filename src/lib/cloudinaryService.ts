@@ -85,6 +85,9 @@ export async function uploadToCloudinary(
     }
   }
 
+  // Detect if running on Netlify environment
+  const isNetlifyHost = typeof window !== 'undefined' && (window.location.hostname.includes('netlify.app') || window.location.hostname.includes('netlify'));
+
   // =========================================================================
   // TIER 1: Signature-based direct upload via Netlify Function (Preferred)
   // =========================================================================
@@ -137,40 +140,43 @@ export async function uploadToCloudinary(
 
   // =========================================================================
   // TIER 2: Express server route (/api/upload or /api/upload-video with multer)
+  // (Only run if NOT on Netlify, because Express routes do not exist on Netlify static hosts)
   // =========================================================================
-  try {
-    const apiEndpoint = isVideoFile ? '/api/upload-video' : '/api/upload';
-    const fieldName = isVideoFile ? 'video' : 'image';
+  if (!isNetlifyHost) {
+    try {
+      const apiEndpoint = isVideoFile ? '/api/upload-video' : '/api/upload';
+      const fieldName = isVideoFile ? 'video' : 'image';
 
-    const formData = new FormData();
-    if (uploadPayload instanceof File || uploadPayload instanceof Blob) {
-      formData.append(fieldName, uploadPayload, filename);
-    } else {
-      formData.append(fieldName, uploadPayload as string);
-    }
-    formData.append('folder', folder);
-    formData.append('filename', filename);
-
-    const expressRes = await fetch(apiEndpoint, {
-      method: 'POST',
-      body: formData,
-    });
-
-    const contentType = expressRes.headers.get('content-type') || '';
-    if (expressRes.ok && contentType.includes('application/json')) {
-      const data = await expressRes.json();
-      if (data.success && data.url) {
-        console.log('[Cloudinary] Upload succeeded via Tier 2 (Express server/multer)');
-        return data.url;
+      const formData = new FormData();
+      if (uploadPayload instanceof File || uploadPayload instanceof Blob) {
+        formData.append(fieldName, uploadPayload, filename);
+      } else {
+        formData.append(fieldName, uploadPayload as string);
       }
-      if (data.url) {
-        return data.url;
+      formData.append('folder', folder);
+      formData.append('filename', filename);
+
+      const expressRes = await fetch(apiEndpoint, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const contentType = expressRes.headers.get('content-type') || '';
+      if (expressRes.ok && contentType.includes('application/json')) {
+        const data = await expressRes.json();
+        if (data.success && data.url) {
+          console.log('[Cloudinary] Upload succeeded via Tier 2 (Express server/multer)');
+          return data.url;
+        }
+        if (data.url) {
+          return data.url;
+        }
+      } else {
+        console.log('[Cloudinary] Tier 2 Express server route returned non-JSON or status ' + expressRes.status);
       }
-    } else {
-      console.log('[Cloudinary] Tier 2 Express server route returned non-JSON or status ' + expressRes.status);
+    } catch (err) {
+      console.warn('[Cloudinary] Tier 2 (Express server route) unreachable:', err);
     }
-  } catch (err) {
-    console.warn('[Cloudinary] Tier 2 (Express server route) unreachable:', err);
   }
 
   // =========================================================================
@@ -227,46 +233,30 @@ export async function uploadToCloudinary(
 export async function deleteFromCloudinary(url: string): Promise<boolean> {
   if (!url || !url.includes('cloudinary.com')) return false;
 
-  // Tier 1: Try /api/delete-cloudinary
-  try {
-    const res = await fetch('/api/delete-cloudinary', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
-    });
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      const data = await res.json();
-      if (res.ok && data.success) {
-        console.log('[Cloudinary] Delete succeeded via /api/delete-cloudinary');
-        return true;
-      } else {
-        console.warn(`[Cloudinary] /api/delete-cloudinary returned status ${res.status}:`, data);
-      }
-    }
-  } catch (err) {
-    console.warn('[Cloudinary] Delete API endpoint unreachable:', err);
-  }
+  const isNetlify = typeof window !== 'undefined' && (window.location.hostname.includes('netlify.app') || window.location.hostname.includes('netlify'));
 
-  // Tier 2: Try direct /.netlify/functions/delete-cloudinary fallback
-  try {
-    const netlifyRes = await fetch('/.netlify/functions/delete-cloudinary', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
-    });
-    const netlifyContentType = netlifyRes.headers.get('content-type') || '';
-    if (netlifyContentType.includes('application/json')) {
-      const netlifyData = await netlifyRes.json();
-      if (netlifyRes.ok && netlifyData.success) {
-        console.log('[Cloudinary] Delete succeeded via /.netlify/functions/delete-cloudinary');
-        return true;
-      } else {
-        console.warn(`[Cloudinary] /.netlify/functions/delete-cloudinary returned status ${netlifyRes.status}:`, netlifyData);
+  const endpoints = isNetlify
+    ? ['/.netlify/functions/delete-cloudinary', '/api/delete-cloudinary']
+    : ['/api/delete-cloudinary', '/.netlify/functions/delete-cloudinary'];
+
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        if (res.ok && data.success) {
+          console.log(`[Cloudinary] Delete succeeded via ${endpoint}`);
+          return true;
+        }
       }
+    } catch (err) {
+      console.warn(`[Cloudinary] ${endpoint} unreachable:`, err);
     }
-  } catch (err) {
-    console.warn('[Cloudinary] Netlify Function delete endpoint unreachable:', err);
   }
 
   return false;

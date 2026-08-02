@@ -134,7 +134,7 @@ export default function MemoryTimeline({
         setShowSuccessBanner(true);
         setTimeout(() => setShowSuccessBanner(false), 8000);
       } else {
-        setUploadError("Failed to submit memory to admin.");
+        setUploadError("Failed to process memory upload. Please try again.");
       }
     } catch (err: any) {
       console.error("Submission failed:", err);

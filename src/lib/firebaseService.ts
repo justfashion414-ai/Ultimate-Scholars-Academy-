@@ -534,6 +534,27 @@ export async function fetchPhotos(): Promise<Photo[]> {
   }
 }
 
+export function subscribePhotos(callback: (photos: Photo[]) => void) {
+  try {
+    const q = query(collection(db, "photos"), orderBy("uploadedAt", "desc"));
+    return onSnapshot(q, (snap) => {
+      if (snap.empty) {
+        callback(PRE_POPULATED_PHOTOS);
+      } else {
+        const photos = snap.docs.map(d => d.data() as Photo);
+        callback(photos);
+      }
+    }, (err) => {
+      console.error("Error subscribing to photos snapshot:", err);
+      callback(PRE_POPULATED_PHOTOS);
+    });
+  } catch (err) {
+    console.error("Failed to subscribe to photos:", err);
+    callback(PRE_POPULATED_PHOTOS);
+    return () => {};
+  }
+}
+
 export async function addPhoto(photo: Photo): Promise<void> {
   try {
     await setDoc(doc(db, "photos", photo.id), photo);

@@ -49,7 +49,7 @@ export default function VideoGallery({
     url: '',
     thumbnailUrl: ''
   });
-  const [submissionType, setSubmissionType] = useState<'link' | 'file'>('link');
+  const [submissionType, setSubmissionType] = useState<'link' | 'file'>('file');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -583,37 +583,6 @@ export default function VideoGallery({
               </p>
 
               <form onSubmit={handleSubmitVideo} className="space-y-4">
-                
-                {/* SUBMISSION TYPE TOGGLE */}
-                <div className="bg-black/20 p-1 rounded-xl border border-white/5 flex gap-1 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSubmissionType('link');
-                      setUploadError('');
-                    }}
-                    className={`flex-1 py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-1.5 ${
-                      submissionType === 'link' ? 'bg-[#D4A017] text-slate-900' : 'text-white/60 hover:text-white'
-                    }`}
-                  >
-                    <LinkIcon className="w-3.5 h-3.5" />
-                    Video Link
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSubmissionType('file');
-                      setUploadError('');
-                    }}
-                    className={`flex-1 py-2 rounded-lg font-bold transition-all flex items-center justify-center gap-1.5 ${
-                      submissionType === 'file' ? 'bg-[#D4A017] text-slate-900' : 'text-white/60 hover:text-white'
-                    }`}
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    Video File Upload
-                  </button>
-                </div>
-
                 <div className="space-y-1">
                   <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest pl-1">Video Title / Occasion</label>
                   <input
@@ -654,69 +623,42 @@ export default function VideoGallery({
                   </div>
                 </div>
 
-                {/* CONDITIONAL SUBMISSION SECTIONS */}
-                {submissionType === 'link' ? (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest pl-1">YouTube, Vimeo, or MP4 URL</label>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest pl-1">Select Video Files (Up to 5)</label>
+                  
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-white/20 hover:border-[#D4A017]/50 rounded-2xl p-6 text-center cursor-pointer transition-all bg-black/10 hover:bg-black/20"
+                  >
                     <input
-                      type="url"
-                      required={submissionType === 'link'}
-                      placeholder="https://www.youtube.com/watch?v=..."
-                      value={newVideo.url}
-                      onChange={(e) => setNewVideo(prev => ({ ...prev, url: e.target.value }))}
-                      className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#D4A017]/20 focus:border-[#D4A017]"
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="video/*"
+                      className="hidden"
+                      multiple
                     />
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest pl-1">Select Video Files (Up to 5, Under 15MB each)</label>
                     
-                    <div 
-                      onClick={() => fileInputRef.current?.click()}
-                      className="border-2 border-dashed border-white/20 hover:border-[#D4A017]/50 rounded-2xl p-6 text-center cursor-pointer transition-all bg-black/10 hover:bg-black/20"
-                    >
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        accept="video/*"
-                        className="hidden"
-                        multiple
-                      />
-                      
-                      <Video className="w-8 h-8 text-[#D4A017]/60 mx-auto mb-2" />
-                      {selectedFiles && selectedFiles.length > 0 ? (
-                        <div>
-                          <p className="text-xs font-semibold text-emerald-400">
-                            {selectedFiles.length} {selectedFiles.length === 1 ? 'video' : 'videos'} selected:
-                          </p>
-                          <ul className="text-[10px] text-white/60 space-y-1 mt-2 text-left list-disc list-inside">
-                            {selectedFiles.map((file, idx) => (
-                              <li key={idx} className="truncate">{file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)</li>
-                            ))}
-                          </ul>
-                          <p className="text-[9px] text-[#D4A017] mt-2 underline cursor-pointer hover:text-white" onClick={(e) => { e.stopPropagation(); setSelectedFiles([]); }}>Clear selection</p>
-                        </div>
-                      ) : (
-                        <div>
-                          <p className="text-xs font-semibold">Click to browse video files</p>
-                          <p className="text-[10px] text-white/40 mt-1 uppercase font-mono tracking-wider">MP4, WebM, or OGG up to 15MB each</p>
-                        </div>
-                      )}
-                    </div>
+                    <Video className="w-8 h-8 text-[#D4A017]/60 mx-auto mb-2" />
+                    {selectedFiles && selectedFiles.length > 0 ? (
+                      <div>
+                        <p className="text-xs font-semibold text-emerald-400">
+                          {selectedFiles.length} {selectedFiles.length === 1 ? 'video' : 'videos'} selected:
+                        </p>
+                        <ul className="text-[10px] text-white/60 space-y-1 mt-2 text-left list-disc list-inside">
+                          {selectedFiles.map((file, idx) => (
+                            <li key={idx} className="truncate">{file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)</li>
+                          ))}
+                        </ul>
+                        <p className="text-[9px] text-[#D4A017] mt-2 underline cursor-pointer hover:text-white" onClick={(e) => { e.stopPropagation(); setSelectedFiles([]); }}>Clear selection</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs font-semibold">Click to browse video files</p>
+                        <p className="text-[10px] text-white/40 mt-1 uppercase font-mono tracking-wider">MP4, WebM, or OGG video format</p>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest pl-1">Cover Thumbnail Image URL (Optional)</label>
-                  <input
-                    type="url"
-                    placeholder="https://images.unsplash.com/..."
-                    value={newVideo.thumbnailUrl}
-                    onChange={(e) => setNewVideo(prev => ({ ...prev, thumbnailUrl: e.target.value }))}
-                    className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#D4A017]/20 focus:border-[#D4A017]"
-                  />
-                  <p className="text-[9px] text-white/40 leading-normal pl-1">Provides a beautiful splash cover for your video card.</p>
                 </div>
 
                 {uploadError && (
@@ -738,7 +680,7 @@ export default function VideoGallery({
                   ) : (
                     <>
                       <Check className="w-4 h-4 text-slate-900" />
-                      Submit to Moderation Queue
+                      Submit Video Memory
                     </>
                   )}
                 </button>

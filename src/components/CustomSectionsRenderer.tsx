@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, Gift, Cake, Megaphone, Award, Quote, Bell, Heart, Star, Film, Image } from 'lucide-react';
+import { Gift, Cake, Megaphone, Award, Quote, Bell, Heart, Star, Film, Image } from 'lucide-react';
 import { CustomSection } from '../types';
 
 interface CustomSectionsRendererProps {
@@ -308,7 +308,7 @@ export default function CustomSectionsRenderer({ sections }: CustomSectionsRende
                   <div className="space-y-4">
                     <div className={`flex items-center gap-2 ${!hasMedia && 'justify-center'}`}>
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4A017]/15 border border-[#D4A017]/30 text-[#D4A017] text-[10px] font-mono tracking-wider uppercase">
-                        <Sparkles className="w-3 h-3" /> {section.subLabel || 'Special Update'}
+                        <Star className="w-3 h-3" /> {section.subLabel || 'Special Update'}
                       </span>
                     </div>
                     

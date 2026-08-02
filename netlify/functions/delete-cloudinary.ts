@@ -137,14 +137,14 @@ export async function handler(event: any) {
     });
 
     const data = (await response.json()) as { result?: string; error?: any };
-    if (data.result === 'ok') {
+    if (data.result === 'ok' || data.result === 'not_found') {
       return {
         statusCode: 200,
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
         },
-        body: JSON.stringify({ success: true, message: 'Deleted from Cloudinary successfully' }),
+        body: JSON.stringify({ success: true, message: 'Deleted or asset already removed from Cloudinary' }),
       };
     } else {
       return {

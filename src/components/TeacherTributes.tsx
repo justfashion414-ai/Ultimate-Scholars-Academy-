@@ -115,7 +115,7 @@ export default function TeacherTributes({
         }
         setTimeout(() => setShowSuccessBanner(false), 8000);
       } else {
-        setUploadError("Failed to submit tribute for moderation.");
+        setUploadError("Failed to process tribute submission. Please try again.");
       }
     } catch (err: any) {
       console.error(err);

@@ -9,3 +9,7 @@ export function getYouTubeID(url: string): string | null {
 export const handleUploadImageFile = async (file: File): Promise<string> => {
   return uploadToCloudinary(file, { filename: file.name });
 };
+
+export const handleUploadVideoFile = async (file: File): Promise<string> => {
+  return uploadToCloudinary(file, { resourceType: 'video', filename: file.name });
+};

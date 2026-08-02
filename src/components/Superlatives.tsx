@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Trophy, Star, ShieldCheck, Heart, Sparkles, ArrowLeft } from 'lucide-react';
+import { Trophy, Star, ShieldCheck, Heart, Award, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SUPERLATIVES_DATA } from '../data';
 
@@ -19,7 +19,7 @@ export default function Superlatives({ isPreview = false }: { isPreview?: boolea
       case 'Best Dressed':
         return <Star className="w-6 h-6 text-[#D4A017]" />;
       case 'Class Clown':
-        return <Sparkles className="w-6 h-6 text-[#D4A017]" />;
+        return <Award className="w-6 h-6 text-[#D4A017]" />;
       case 'Most Studious':
         return <ShieldCheck className="w-6 h-6 text-[#D4A017]" />;
       case 'Most Likely to Become President':

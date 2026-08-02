@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { UserPlus, AlertTriangle, Loader2, Shield, Camera, Upload, Sparkles, X } from 'lucide-react';
+import { UserPlus, AlertTriangle, Loader2, Shield, Camera, Upload, Star, X } from 'lucide-react';
 import { 
   fetchAdmins, 
   addAdminUser, 
@@ -247,7 +247,7 @@ export default function AdminUsersPanel({ onDataChange, refreshKey = 0 }: AdminU
         {/* WEBSITE BANNER PREVIEW SETTING */}
         <div className="bg-[#050E22]/40 border border-white/5 p-6 rounded-2xl space-y-4 text-left">
           <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-5 h-5 text-[#D4A017]" />
+            <Star className="w-5 h-5 text-[#D4A017]" />
             <h3 className="text-lg font-serif font-bold text-white">Homepage Banner Event</h3>
           </div>
           <p className="text-xs text-white/60 leading-relaxed">

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Calendar, ChevronDown } from 'lucide-react';
 import { CAROUSEL_IMAGES } from '../data';
-import { subscribeSchoolLogo, subscribeActiveBannerEvent, fetchPhotos } from '../lib/firebaseService';
+import { subscribeSchoolLogo, subscribeActiveBannerEvent, subscribePhotos } from '../lib/firebaseService';
+import { Photo } from '../types';
 
 interface HeroCarouselProps {
   targetDate: string; // ISO format string
@@ -91,53 +92,45 @@ export default function HeroCarousel({ targetDate, onViewAlbumClick }: HeroCarou
     return () => unsubscribeLogo();
   }, []);
 
-  // Fetch photos and subscribe to selected banner event
+  // Real-time photo subscription to dynamically auto-select from the last 20 images in the photo album
   useEffect(() => {
     let currentSelectedEvent: string | null = null;
+    let latestPhotos: Photo[] = [];
 
-    const loadImages = async (selEvent: string | null) => {
+    const updateBannerImages = (selEvent: string | null, photos: Photo[]) => {
       try {
-        const allPhotos = await fetchPhotos();
-        if (allPhotos && allPhotos.length > 0) {
-          let targetEvent = selEvent;
-          
-          if (!targetEvent) {
-            // Pick the event of the photo uploaded last
-            // Approved photos are ordered by uploadedAt desc
-            targetEvent = allPhotos[0].title;
-          }
+        if (photos && photos.length > 0) {
+          // Always auto-select up to 20 of the latest uploaded images from the photo album
+          const last20Photos = photos.slice(0, 20);
+          const urls = last20Photos.map(p => p.url);
 
-          // Filter photos matching this event
-          const matchedPhotos = allPhotos.filter(
-            p => p.title.trim().toLowerCase() === targetEvent?.trim().toLowerCase()
-          );
-          
-          const urls = matchedPhotos.map(p => p.url);
-          if (urls.length > 0) {
-            setDynamicImages(urls);
-            setBannerTitle(targetEvent);
-            setIsImagesLoaded(true);
-            return;
-          }
+          setDynamicImages(urls);
+          setBannerTitle(selEvent || photos[0]?.title || '2026 Colorful Events');
+          setIsImagesLoaded(true);
+        } else {
+          setDynamicImages(CAROUSEL_IMAGES.slice(0, 20));
+          setBannerTitle(selEvent || '2026 Colorful Events');
+          setIsImagesLoaded(true);
         }
-        
-        // Fallback to default
-        setDynamicImages([]);
-        setBannerTitle('');
-        setIsImagesLoaded(true);
       } catch (err) {
-        console.error("Error loading banner images:", err);
+        console.error("Error updating banner images:", err);
         setIsImagesLoaded(true);
       }
     };
 
     const unsubscribeEvent = subscribeActiveBannerEvent(eventName => {
       currentSelectedEvent = eventName;
-      loadImages(currentSelectedEvent);
+      updateBannerImages(currentSelectedEvent, latestPhotos);
+    });
+
+    const unsubscribePhotos = subscribePhotos(photos => {
+      latestPhotos = photos;
+      updateBannerImages(currentSelectedEvent, latestPhotos);
     });
 
     return () => {
       unsubscribeEvent();
+      unsubscribePhotos();
     };
   }, []);
 
@@ -181,19 +174,21 @@ export default function HeroCarousel({ targetDate, onViewAlbumClick }: HeroCarou
       
       {/* HEADER LOGO STRIP */}
       <div className="relative z-10 w-full px-6 py-3 md:py-4 flex justify-between items-center border-b border-white/5 bg-[#050E22]/90 backdrop-blur-md shrink-0">
-        <div className="flex items-center gap-2.5">
+        <div 
+          className="flex items-center gap-2.5 cursor-pointer select-none active:scale-98 transition-transform"
+          onClick={handleLogoClick}
+          title="Scholars Academy"
+        >
           {logoUrl ? (
             <img
               src={logoUrl}
               alt="School Logo"
               referrerPolicy="no-referrer"
-              onClick={handleLogoClick}
-              className="w-10 h-10 object-contain rounded-full bg-white/5 p-1 border border-white/10 shadow-md cursor-pointer transition-transform active:scale-95"
+              className="w-10 h-10 object-contain rounded-full bg-white/5 p-1 border border-white/10 shadow-md transition-transform"
             />
           ) : (
             <div 
-              onClick={handleLogoClick}
-              className="w-10 h-10 rounded-full bg-gradient-to-br from-[#D4A017] to-[#b0820e] flex items-center justify-center text-[#0F2557] font-serif font-extrabold text-lg shadow-md border border-white/10 cursor-pointer transition-transform active:scale-95"
+              className="w-10 h-10 rounded-full bg-gradient-to-br from-[#D4A017] to-[#b0820e] flex items-center justify-center text-[#0F2557] font-serif font-extrabold text-lg shadow-md border border-white/10 transition-transform"
             >
               S
             </div>
@@ -415,16 +410,14 @@ export default function HeroCarousel({ targetDate, onViewAlbumClick }: HeroCarou
 
       {/* CALL TO ACTION ROW (Tightly positioned under the scrolling image banner) */}
       <div className="relative z-10 w-full text-center pb-5 pt-3.5 flex flex-col items-center gap-3 bg-[#050E22]/95 border-t border-white/5 shrink-0">
-        {bannerTitle && (
-          <motion.div 
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-lg mx-auto py-2 px-6 bg-gradient-to-r from-[#0F2557] to-[#1a3d82] border-y border-[#D4A017]/30 text-white flex items-center justify-center gap-2 text-xs md:text-sm font-sans tracking-wide uppercase shadow-lg"
-          >
-            <span className="font-semibold text-white/80">Showcasing Event:</span>
-            <strong className="text-[#D4A017] font-bold tracking-wider">{bannerTitle}</strong>
-          </motion.div>
-        )}
+        <motion.div 
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-lg mx-auto py-2 px-6 bg-gradient-to-r from-[#0F2557] to-[#1a3d82] border-y border-[#D4A017]/30 text-white flex items-center justify-center gap-2 text-xs md:text-sm font-sans tracking-wide uppercase shadow-lg"
+        >
+          <span className="font-semibold text-white/80">Showcasing Event:</span>
+          <strong className="text-[#D4A017] font-bold tracking-wider">{bannerTitle || "2026 Colorful Events"}</strong>
+        </motion.div>
 
         <motion.button
           onClick={onViewAlbumClick}
