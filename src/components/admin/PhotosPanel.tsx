@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent, useRef } from 'react';
+import React, { useState, useEffect, FormEvent, useRef } from 'react';
 import { Camera, Trash2, Loader2, Upload, CheckCircle2 } from 'lucide-react';
 import { fetchPhotos, addPhoto, deleteApprovedPhoto } from '../../lib/firebaseService';
 import { Photo } from '../../types';

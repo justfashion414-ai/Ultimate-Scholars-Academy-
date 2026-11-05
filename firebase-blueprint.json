@@ -310,6 +310,77 @@
         }
       },
       "required": ["id", "type", "submittedAt", "data"]
+    },
+    "CodingProject": {
+      "title": "CodingProject",
+      "description": "Student coding work saved in the Coding Lab.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the project."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Student unique identifier or auth UID."
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Full name of the student."
+        },
+        "studentEmail": {
+          "type": "string",
+          "description": "Student email address."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the project or exercise."
+        },
+        "files": {
+          "type": "object",
+          "description": "Code files dictionary containing index.html, styles.css, script.js."
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "studentId", "studentName", "title", "files"]
+    },
+    "CodingStudent": {
+      "title": "CodingStudent",
+      "description": "Student registered for coding training via Email/Password or Student ID/PIN.",
+      "type": "object",
+      "properties": {
+        "studentId": {
+          "type": "string"
+        },
+        "studentName": {
+          "type": "string"
+        },
+        "studentEmail": {
+          "type": "string"
+        },
+        "className": {
+          "type": "string"
+        },
+        "authMethod": {
+          "type": "string",
+          "enum": ["email_password", "student_id_pin"]
+        },
+        "loginIdentifier": {
+          "type": "string"
+        },
+        "pin": {
+          "type": "string"
+        },
+        "lastActive": {
+          "type": "string"
+        }
+      },
+      "required": ["studentId", "studentName", "authMethod"]
     }
   },
   "firestore": {
@@ -356,6 +427,14 @@
     "custom_sections": {
       "schema": "CustomSection",
       "description": "Dynamically added segments of content."
+    },
+    "coding_projects": {
+      "schema": "CodingProject",
+      "description": "Student coding projects saved for training and teacher review."
+    },
+    "coding_students": {
+      "schema": "CodingStudent",
+      "description": "Registered coding students with Email/Password or Student ID/PIN."
     }
   }
 }

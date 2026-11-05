@@ -7,6 +7,7 @@ import {
   deleteDoc, 
   query, 
   orderBy, 
+  where,
   writeBatch,
   getDoc,
   onSnapshot
@@ -14,7 +15,7 @@ import {
 import { db, auth } from "./firebase";
 import { deleteFromCloudinary } from "./cloudinaryService";
 import { STUDENTS_DATA, TIMELINE_DATA, PRE_POPULATED_GUESTBOOK, PRE_POPULATED_VIDEOS, PRE_POPULATED_PHOTOS, SUPERLATIVES_DATA, TEACHER_TRIBUTES_DATA } from "../data";
-import { Student, TimelineEvent, GuestbookEntry, VideoMemory, AdminUser, Photo, Superlative, TeacherTribute, CustomSection } from "../types";
+import { Student, TimelineEvent, GuestbookEntry, VideoMemory, AdminUser, Photo, Superlative, TeacherTribute, CustomSection, CodingProject, CodingStudentProfile } from "../types";
 
 // ==========================================
 // ERROR HANDLING UTILITIES (Mandatory Skill Requirement)
@@ -163,6 +164,54 @@ export async function seedDatabaseIfEmpty() {
         batch.set(docRef, trib);
       });
       await batch.commit();
+    }
+
+    // 8. Check & Seed Coding Projects collection (ensures collection is visible in Firebase Console)
+    try {
+      const codingProjectsRef = collection(db, "coding_projects");
+      const codingProjectsSnap = await getDocs(codingProjectsRef);
+      if (codingProjectsSnap.empty) {
+        console.log("Seeding initial coding_projects collection in Firestore...");
+        const starterProject: CodingProject = {
+          id: "starter_practice_project",
+          studentId: "student_starter",
+          studentName: "Class Starter",
+          studentEmail: "class@scholarsacademy.edu",
+          title: "Welcome to Coding Lab Starter",
+          files: {
+            "index.html": "<div class=\"welcome-box\">\n  <h1>Welcome to Coding Lab!</h1>\n  <p>Start editing or select a template above.</p>\n</div>",
+            "styles.css": ".welcome-box {\n  text-align: center;\n  padding: 40px;\n  font-family: sans-serif;\n  color: #0F2557;\n}",
+            "script.js": "console.log('Coding lab ready.');"
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await setDoc(doc(db, "coding_projects", starterProject.id), starterProject);
+      }
+    } catch (err) {
+      console.warn("Notice: coding_projects check/seed notice:", err);
+    }
+
+    // 9. Check & Seed Coding Students collection (ensures collection is visible in Firebase Console)
+    try {
+      const codingStudentsRef = collection(db, "coding_students");
+      const codingStudentsSnap = await getDocs(codingStudentsRef);
+      if (codingStudentsSnap.empty) {
+        console.log("Seeding initial coding_students collection in Firestore...");
+        const demoStudent: CodingStudentProfile = {
+          studentId: "student_starter_demo",
+          studentName: "Demo Student",
+          studentEmail: "demo@scholarsacademy.edu",
+          className: "Class of 2026",
+          authMethod: "student_id_pin",
+          loginIdentifier: "STD001",
+          pin: "1234",
+          lastActive: new Date().toISOString()
+        };
+        await setDoc(doc(db, "coding_students", demoStudent.studentId), demoStudent);
+      }
+    } catch (err) {
+      console.warn("Notice: coding_students check/seed notice:", err);
     }
 
     console.log("Firestore database check & seeding complete!");
@@ -850,3 +899,378 @@ export async function deleteApprovedCustomSection(id: string, mediaUrl?: string)
   }
 }
 
+// ==========================================
+// STUDENT CODING LAB PERSISTENCE & MONITORING
+// ==========================================
+
+export async function saveCodingProject(project: CodingProject): Promise<void> {
+  const updatedProject: CodingProject = {
+    ...project,
+    updatedAt: new Date().toISOString()
+  };
+
+  // Always mirror in localStorage for offline resilience & immediate feedback
+  try {
+    const localKey = `scholars_coding_projects_${project.studentId}`;
+    const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const index = existing.findIndex((p: any) => p.id === project.id);
+    if (index >= 0) {
+      existing[index] = updatedProject;
+    } else {
+      existing.unshift(updatedProject);
+    }
+    localStorage.setItem(localKey, JSON.stringify(existing));
+  } catch (e) {
+    console.warn("Local storage save error:", e);
+  }
+
+  // Save to Cloud Firestore
+  try {
+    await setDoc(doc(db, "coding_projects", project.id), updatedProject);
+    console.log(`[Firestore] Project "${project.title}" saved to cloud successfully.`);
+  } catch (err: any) {
+    console.error("[Firestore] saveCodingProject cloud save failed:", err);
+    throw new Error(`Cloud save error: ${err.message || 'Unable to reach Firestore'}. Changes kept in local browser cache.`);
+  }
+}
+
+export async function fetchStudentCodingProjects(studentId: string): Promise<CodingProject[]> {
+  const localKey = `scholars_coding_projects_${studentId}`;
+  let localProjects: CodingProject[] = [];
+  try {
+    localProjects = JSON.parse(localStorage.getItem(localKey) || '[]');
+  } catch (e) {
+    localProjects = [];
+  }
+
+  try {
+    const q = query(
+      collection(db, "coding_projects"),
+      where("studentId", "==", studentId)
+    );
+    const snap = await getDocs(q);
+    const remoteProjects: CodingProject[] = [];
+    snap.forEach(docSnap => {
+      remoteProjects.push(docSnap.data() as CodingProject);
+    });
+
+    // Auto-sync: If this device contains local projects that haven't been pushed to the cloud yet
+    // (e.g. created prior to rules deployment or offline), upload them now to make them visible across all devices!
+    for (const lp of localProjects) {
+      const alreadyInRemote = remoteProjects.some(rp => rp.id === lp.id);
+      if (!alreadyInRemote && lp.id && lp.studentId) {
+        try {
+          console.log(`[Cloud Sync] Uploading unsynced project "${lp.title}" to Firestore...`);
+          await setDoc(doc(db, "coding_projects", lp.id), {
+            ...lp,
+            updatedAt: lp.updatedAt || new Date().toISOString()
+          });
+          remoteProjects.push(lp);
+        } catch (syncErr) {
+          console.warn("[Cloud Sync] Failed uploading unsynced project:", syncErr);
+        }
+      }
+    }
+
+    if (remoteProjects.length > 0) {
+      remoteProjects.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+      try {
+        localStorage.setItem(localKey, JSON.stringify(remoteProjects));
+      } catch (e) {
+        // ignore
+      }
+      return remoteProjects;
+    }
+  } catch (err) {
+    console.warn("Firestore fetchStudentCodingProjects notice (using local cache):", err);
+  }
+
+  return localProjects;
+}
+
+export async function fetchAllCodingProjects(): Promise<CodingProject[]> {
+  try {
+    const snap = await getDocs(collection(db, "coding_projects"));
+    const projects: CodingProject[] = [];
+    snap.forEach(docSnap => {
+      projects.push(docSnap.data() as CodingProject);
+    });
+    // Sort by updatedAt desc
+    projects.sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime());
+    return projects;
+  } catch (err) {
+    console.warn("Firestore fetchAllCodingProjects notice:", err);
+    // Gather all local projects across all keys
+    const allLocal: CodingProject[] = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("scholars_coding_projects_")) {
+          const list = JSON.parse(localStorage.getItem(key) || '[]');
+          allLocal.push(...list);
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return allLocal;
+  }
+}
+
+export async function deleteCodingProject(projectId: string, studentId: string): Promise<void> {
+  try {
+    const localKey = `scholars_coding_projects_${studentId}`;
+    const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const filtered = existing.filter((p: any) => p.id !== projectId);
+    localStorage.setItem(localKey, JSON.stringify(filtered));
+  } catch (e) {
+    console.warn("Local storage delete error:", e);
+  }
+
+  try {
+    await deleteDoc(doc(db, "coding_projects", projectId));
+  } catch (err) {
+    console.warn("Firestore deleteCodingProject notice:", err);
+  }
+}
+
+// -----------------------------------------------------------------
+// STUDENT REGISTRATION & AUTHENTICATION (STUDENT ID & PIN / EMAIL)
+// -----------------------------------------------------------------
+
+export function getCleanStudentDocId(studentId: string): string {
+  const sanitized = studentId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  return `student_${sanitized}`;
+}
+
+export async function saveStudentProfile(profile: CodingStudentProfile): Promise<void> {
+  // Mirror in localStorage
+  try {
+    const stored = JSON.parse(localStorage.getItem('scholars_coding_students_db') || '{}');
+    stored[profile.studentId] = profile;
+    localStorage.setItem('scholars_coding_students_db', JSON.stringify(stored));
+  } catch (e) {
+    console.warn("Local storage save error for student profile:", e);
+  }
+
+  // Save to Firestore cloud
+  try {
+    await setDoc(doc(db, "coding_students", profile.studentId), {
+      ...profile,
+      lastActive: new Date().toISOString()
+    }, { merge: true });
+    console.log(`[Firestore] Student profile "${profile.studentName}" synced to cloud.`);
+  } catch (err: any) {
+    console.warn("Firestore saveStudentProfile notice (cached locally):", err);
+  }
+}
+
+export async function fetchStudentProfile(studentId: string): Promise<CodingStudentProfile | null> {
+  // Try Firestore first
+  try {
+    const snap = await getDoc(doc(db, "coding_students", studentId));
+    if (snap.exists()) {
+      const data = snap.data() as CodingStudentProfile;
+      try {
+        const stored = JSON.parse(localStorage.getItem('scholars_coding_students_db') || '{}');
+        stored[studentId] = data;
+        localStorage.setItem('scholars_coding_students_db', JSON.stringify(stored));
+      } catch (e) {
+        // ignore
+      }
+      return data;
+    }
+  } catch (err) {
+    console.warn("Firestore fetchStudentProfile notice:", err);
+  }
+
+  // Fallback to local storage
+  try {
+    const stored = JSON.parse(localStorage.getItem('scholars_coding_students_db') || '{}');
+    if (stored[studentId]) {
+      const localData = stored[studentId];
+      // Attempt background push to cloud so other devices have access
+      try {
+        await setDoc(doc(db, "coding_students", studentId), localData, { merge: true });
+      } catch (syncErr) {
+        // ignore
+      }
+      return localData;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return null;
+}
+
+export async function registerStudentWithIdPin(
+  rawStudentId: string, 
+  name: string, 
+  pin: string, 
+  className?: string
+): Promise<CodingStudentProfile> {
+  const trimmedId = rawStudentId.trim();
+  const trimmedPin = pin.trim();
+  const trimmedName = name.trim();
+
+  if (!trimmedId) throw new Error("Student ID is required.");
+  if (!trimmedName) throw new Error("Student Name is required.");
+  if (trimmedPin.length < 4) throw new Error("PIN must be at least 4 digits.");
+
+  const docId = getCleanStudentDocId(trimmedId);
+
+  // Check if student already exists in Firestore
+  try {
+    const existingSnap = await getDoc(doc(db, "coding_students", docId));
+    if (existingSnap.exists()) {
+      throw new Error(`Student ID "${trimmedId.toUpperCase()}" is already registered. Please use the Sign In tab.`);
+    }
+  } catch (e: any) {
+    if (e.message?.includes("already registered")) {
+      throw e;
+    }
+  }
+
+  // Also check local store
+  try {
+    const stored = JSON.parse(localStorage.getItem('scholars_coding_students_db') || '{}');
+    if (stored[docId]) {
+      throw new Error(`Student ID "${trimmedId.toUpperCase()}" is already registered. Please use the Sign In tab.`);
+    }
+  } catch (e: any) {
+    if (e.message?.includes("already registered")) {
+      throw e;
+    }
+  }
+
+  const newProfile: CodingStudentProfile = {
+    studentId: docId,
+    studentName: trimmedName,
+    studentEmail: `${trimmedId.toLowerCase()}@student.local`,
+    className: className?.trim() || 'Class of 2026',
+    authMethod: 'student_id_pin',
+    loginIdentifier: trimmedId.toUpperCase(),
+    pin: trimmedPin,
+    lastActive: new Date().toISOString()
+  };
+
+  await saveStudentProfile(newProfile);
+  return newProfile;
+}
+
+export async function loginStudentWithIdPin(rawStudentId: string, pin: string): Promise<CodingStudentProfile> {
+  const trimmedId = rawStudentId.trim();
+  const trimmedPin = pin.trim();
+
+  if (!trimmedId) throw new Error("Please enter your Student ID.");
+  if (!trimmedPin) throw new Error("Please enter your PIN.");
+
+  const docId = getCleanStudentDocId(trimmedId);
+
+  let profile: CodingStudentProfile | null = null;
+
+  // Try Firestore cloud
+  try {
+    const snap = await getDoc(doc(db, "coding_students", docId));
+    if (snap.exists()) {
+      profile = snap.data() as CodingStudentProfile;
+      try {
+        const stored = JSON.parse(localStorage.getItem('scholars_coding_students_db') || '{}');
+        stored[docId] = profile;
+        localStorage.setItem('scholars_coding_students_db', JSON.stringify(stored));
+      } catch (e) {
+        // ignore
+      }
+    }
+  } catch (e) {
+    console.warn("Firestore lookup failed, checking local store:", e);
+  }
+
+  // Fallback to local storage if offline or not in Firestore
+  if (!profile) {
+    try {
+      const stored = JSON.parse(localStorage.getItem('scholars_coding_students_db') || '{}');
+      if (stored[docId]) {
+        profile = stored[docId];
+        // Background push to Firestore so second device can login!
+        try {
+          await setDoc(doc(db, "coding_students", docId), profile, { merge: true });
+        } catch (syncErr) {
+          console.warn("Could not sync local student profile to Firestore:", syncErr);
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  if (!profile) {
+    throw new Error(`Student ID "${trimmedId.toUpperCase()}" not found. If this is your first time, please click "Register New ID".`);
+  }
+
+  if (profile.pin && profile.pin !== trimmedPin) {
+    throw new Error("Incorrect PIN. Please re-enter your 4-digit PIN or ask your teacher for help.");
+  }
+
+  // Update last active
+  profile.lastActive = new Date().toISOString();
+  await saveStudentProfile(profile);
+
+  return profile;
+}
+
+export async function fetchAllStudents(): Promise<CodingStudentProfile[]> {
+  const studentMap = new Map<string, CodingStudentProfile>();
+
+  // Fetch Firestore
+  try {
+    const snap = await getDocs(collection(db, "coding_students"));
+    snap.forEach(docSnap => {
+      const s = docSnap.data() as CodingStudentProfile;
+      studentMap.set(s.studentId, s);
+    });
+  } catch (e) {
+    console.warn("Firestore fetchAllStudents notice:", e);
+  }
+
+  // Merge localStorage
+  try {
+    const stored = JSON.parse(localStorage.getItem('scholars_coding_students_db') || '{}');
+    Object.values(stored).forEach((s: any) => {
+      if (s?.studentId && !studentMap.has(s.studentId)) {
+        studentMap.set(s.studentId, s as CodingStudentProfile);
+      }
+    });
+  } catch (e) {
+    // ignore
+  }
+
+  return Array.from(studentMap.values()).sort((a, b) => 
+    new Date(b.lastActive || 0).getTime() - new Date(a.lastActive || 0).getTime()
+  );
+}
+
+export async function resetStudentPin(studentId: string, newPin: string): Promise<void> {
+  const trimmed = newPin.trim();
+  if (trimmed.length < 4) throw new Error("New PIN must be at least 4 digits.");
+
+  try {
+    await setDoc(doc(db, "coding_students", studentId), {
+      pin: trimmed,
+      lastActive: new Date().toISOString()
+    }, { merge: true });
+  } catch (e) {
+    console.warn("Firestore reset PIN error:", e);
+  }
+
+  try {
+    const stored = JSON.parse(localStorage.getItem('scholars_coding_students_db') || '{}');
+    if (stored[studentId]) {
+      stored[studentId].pin = trimmed;
+      localStorage.setItem('scholars_coding_students_db', JSON.stringify(stored));
+    }
+  } catch (e) {
+    // ignore
+  }
+}

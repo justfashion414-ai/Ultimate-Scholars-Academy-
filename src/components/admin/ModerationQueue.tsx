@@ -105,7 +105,7 @@ export default function ModerationQueue({ onDataChange, refreshKey = 0 }: Modera
         role: data.role || 'Guest'
       });
     } else {
-      const imgUrl = data.imageUrl || data.image || data.url || '';
+      const imgUrl = data.imageUrl || data.image || data.url || null;
       setPreviewMedia({
         id: item.id,
         type: 'image',
@@ -224,7 +224,7 @@ export default function ModerationQueue({ onDataChange, refreshKey = 0 }: Modera
                         <div className="text-center">
                           <span className="text-[8px] font-mono text-white/40 block mb-1">CURRENT</span>
                           <img 
-                            src={getStudentImageById(data.studentId) || ''} 
+                            src={getStudentImageById(data.studentId)} 
                             className="w-16 h-20 sm:w-12 sm:h-16 object-cover rounded border border-white/5" 
                             referrerPolicy="no-referrer" 
                           />

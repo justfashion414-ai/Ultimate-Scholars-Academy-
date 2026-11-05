@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Share2, PhoneCall, Copy, Check, Twitter, Facebook, Shield } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { subscribeSchoolLogo } from '../lib/firebaseService';
 
 export default function ClosingSection() {
@@ -140,10 +141,22 @@ export default function ClosingSection() {
           </div>
         </div>
 
-        {/* BOTTOM FINE PRINT */}
-        <div className="border-t border-white/5 pt-8 text-center text-white/30 text-xs font-mono space-y-3">
-          <p>© {new Date().getFullYear()} Scholars Academy, SS3 Class of 2026. All rights reserved.</p>
-          <p className="mt-1">Crafted with care for the Valedictory End of Session Banquet</p>
+        {/* BOTTOM FINE PRINT & NAV LINKS */}
+        <div className="border-t border-white/5 pt-8 text-center space-y-4">
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-[10px] md:text-xs font-mono uppercase tracking-widest text-white/50">
+            <Link to="/" className="hover:text-[#D4A017] transition-all">Home</Link>
+            <Link to="/graduands" className="hover:text-[#D4A017] transition-all">Graduand Wall</Link>
+            <Link to="/photo-gallery" className="hover:text-[#D4A017] transition-all">Photo Gallery</Link>
+            <Link to="/coding-training" className="hover:text-[#D4A017] transition-all text-[#D4A017]/80 font-bold flex items-center gap-1.5">
+              <Shield className="w-3 h-3" />
+              Coding Training
+            </Link>
+          </div>
+          
+          <div className="text-white/30 text-xs font-mono space-y-3 pt-4">
+            <p>© {new Date().getFullYear()} Scholars Academy, SS3 Class of 2026. All rights reserved.</p>
+            <p className="mt-1">Crafted with care for the Valedictory End of Session Banquet</p>
+          </div>
         </div>
 
       </div>

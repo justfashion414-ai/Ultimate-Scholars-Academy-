@@ -90,8 +90,8 @@ export default function VideoGallery({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    if (files.length > 5) {
-      setUploadError("You can only upload up to 5 videos at a time.");
+    if (files.length > 10) {
+      setUploadError("You can only upload up to 10 videos at a time.");
       return;
     }
 
@@ -624,7 +624,7 @@ export default function VideoGallery({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest pl-1">Select Video Files (Up to 5)</label>
+                  <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest pl-1">Select Video Files (Up to 10)</label>
                   
                   <div 
                     onClick={() => fileInputRef.current?.click()}

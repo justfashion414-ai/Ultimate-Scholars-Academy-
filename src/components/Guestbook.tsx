@@ -458,7 +458,7 @@ export default function Guestbook({
                       </div>
 
                       {/* BOLDER, LARGER NOTE MESSAGE */}
-                      <p className={`text-base md:text-lg font-extrabold leading-snug whitespace-pre-line font-sans tracking-wide text-slate-950 ${style.bodyTextClass}`}>
+                      <p className={`text-lg md:text-2xl font-black leading-snug whitespace-pre-line font-sans tracking-tight text-slate-950 ${style.bodyTextClass}`}>
                         "{entry.message}"
                       </p>
                     </motion.div>

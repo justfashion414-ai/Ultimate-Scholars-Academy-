@@ -106,5 +106,26 @@ service cloud.firestore {
       allow read: if true;
       allow create, update, delete: if isAdmin() && isValidId(sectionId);
     }
+
+    // Coding Projects: Publicly readable for student workspace & teacher monitoring
+    match /coding_projects/{projectId} {
+      allow read: if true;
+      allow create, update: if isValidId(projectId) && 
+                            request.resource.data.keys().hasAll(['id', 'studentId', 'studentName', 'title', 'files']) &&
+                            request.resource.data.id is string &&
+                            request.resource.data.studentId is string &&
+                            request.resource.data.studentName is string &&
+                            request.resource.data.title is string &&
+                            request.resource.data.files is map;
+      allow delete: if isValidId(projectId);
+    }
+
+    // Coding Students: Student accounts created with Email/Password or Student ID + PIN
+    match /coding_students/{studentDocId} {
+      allow read: if true;
+      allow create, update: if isValidId(studentDocId) &&
+                            request.resource.data.keys().hasAll(['studentId', 'studentName', 'authMethod']);
+      allow delete: if isAdmin();
+    }
   }
 }

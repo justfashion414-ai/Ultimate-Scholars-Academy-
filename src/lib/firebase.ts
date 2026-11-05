@@ -8,18 +8,22 @@ import {
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
+import appletConfig from "../../firebase-applet-config.json";
+
 // Check if real Firebase configurations are provided
-const isFirebaseConfigured = !!((import.meta as any).env.VITE_FIREBASE_API_KEY);
+const isFirebaseConfigured = true;
 
 // Public Firebase client config - safe to bundle client-side
 const firebaseConfig = {
-  apiKey: (import.meta as any).env.VITE_FIREBASE_API_KEY || "",
-  authDomain: (import.meta as any).env.VITE_FIREBASE_AUTH_DOMAIN || "",
-  projectId: (import.meta as any).env.VITE_FIREBASE_PROJECT_ID || "",
-  storageBucket: (import.meta as any).env.VITE_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: (import.meta as any).env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: (import.meta as any).env.VITE_FIREBASE_APP_ID || ""
+  apiKey: (import.meta as any).env?.VITE_FIREBASE_API_KEY || appletConfig.apiKey || "",
+  authDomain: (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN || appletConfig.authDomain || "",
+  projectId: (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID || appletConfig.projectId || "",
+  storageBucket: (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET || appletConfig.storageBucket || "",
+  messagingSenderId: (import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID || appletConfig.messagingSenderId || "",
+  appId: (import.meta as any).env?.VITE_FIREBASE_APP_ID || appletConfig.appId || ""
 };
+
+const databaseId = (import.meta as any).env?.VITE_FIREBASE_DATABASE_ID || appletConfig.firestoreDatabaseId || "ai-studio-scholarsacademyg-ebf73b95-53a0-4ed1-9ffc-b16f8e56a9cc";
 
 const app = initializeApp(firebaseConfig);
 
@@ -28,7 +32,7 @@ const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
   })
-}, "ai-studio-scholarsacademyg-ebf73b95-53a0-4ed1-9ffc-b16f8e56a9cc");
+}, databaseId);
 
 const auth = getAuth(app);
 

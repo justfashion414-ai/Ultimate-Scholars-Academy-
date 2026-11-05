@@ -23,6 +23,7 @@ import Guestbook from './components/Guestbook';
 import ClosingSection from './components/ClosingSection';
 import CustomSectionsRenderer from './components/CustomSectionsRenderer';
 import AdminPortal from './components/AdminPortal';
+import CodingTraining from './components/CodingTraining';
 
 function AppContent({
   refreshKey,
@@ -477,6 +478,10 @@ function AppContent({
           <Superlatives 
             isPreview={false}
           />
+        } />
+
+        <Route path="/coding-training" element={
+          <CodingTraining />
         } />
       </Routes>
 

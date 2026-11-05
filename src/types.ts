@@ -80,4 +80,31 @@ export interface CustomSection {
   subLabel?: string;
 }
 
+export interface CodingProject {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentEmail?: string;
+  title: string;
+  description?: string;
+  files: {
+    'index.html': string;
+    'styles.css': string;
+    'script.js': string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CodingStudentProfile {
+  studentId: string;
+  studentName: string;
+  studentEmail?: string;
+  className?: string;
+  authMethod: 'email_password' | 'student_id_pin';
+  loginIdentifier?: string;
+  pin?: string;
+  lastActive: string;
+}
+
 

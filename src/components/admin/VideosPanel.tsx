@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent, useRef } from 'react';
+import React, { useState, useEffect, FormEvent, useRef } from 'react';
 import { Video, Trash2, Play, Loader2, Upload, CheckCircle2 } from 'lucide-react';
 import { fetchVideos, addApprovedVideoMemory, deleteApprovedVideoMemory } from '../../lib/firebaseService';
 import { VideoMemory } from '../../types';

@@ -33,8 +33,8 @@ export default function PhotoUploadForm({ isOpen, onClose, onSuccess }: PhotoUpl
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    if (files.length > 5) {
-      setUploadError("You can only upload up to 5 images at a time.");
+    if (files.length > 30) {
+      setUploadError("You can only upload up to 30 images at a time.");
       return;
     }
 
@@ -193,7 +193,7 @@ export default function PhotoUploadForm({ isOpen, onClose, onSuccess }: PhotoUpl
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-mono uppercase tracking-widest text-slate-500 font-bold pl-1">Choose Images (Max 5)</label>
+                <label className="text-[10px] font-mono uppercase tracking-widest text-slate-500 font-bold pl-1">Choose Images (Max 30)</label>
                 <div className="p-4 border-2 border-dashed border-slate-200 hover:border-[#D4A017]/50 rounded-2xl bg-slate-50/50 transition-all flex flex-col items-center justify-center gap-1.5 relative group">
                   <input
                     type="file"
