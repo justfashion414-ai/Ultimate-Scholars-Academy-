@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import {
   Palette, Upload, Loader2, Trash2, MessageSquare, Award, ImagePlus, Code2,
-  LogOut, ArrowLeft, CheckCircle2, AlertCircle, X, Star, Clock
+  LogOut, ArrowLeft, CheckCircle2, AlertCircle, X, Star, Clock, Menu
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
@@ -37,6 +37,7 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
   const [previewUrl, setPreviewUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState('');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [toDelete, setToDelete] = useState<GraphicsSubmission | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -136,6 +137,11 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
 
   const markedCount = submissions.filter((s) => s.grade).length;
 
+  const scrollToSection = (id: string) => {
+    setIsDrawerOpen(false);
+    setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  };
+
   const handleSwitchToCoding = async () => {
     const updated: CodingStudentProfile = { ...profile, track: 'coding' };
     await saveStudentProfile(updated);
@@ -147,6 +153,13 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
       {/* HEADER */}
       <header className="border-b border-white/10 bg-[#071126]/95 px-3 sm:px-6 py-3 flex items-center justify-between gap-2 sticky top-0 z-30">
         <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            title="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
           <ProfileAvatar profile={profile} onUpdated={onProfileUpdated} />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
@@ -164,22 +177,6 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
-          <button
-            onClick={handleSwitchToCoding}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-[#D4A017]/40 text-[#D4A017] hover:bg-[#D4A017]/10 text-xs font-semibold transition-colors cursor-pointer"
-            title="Move to the Coding Lab"
-          >
-            <Code2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Switch to Coding Lab</span>
-            <span className="sm:hidden">Coding</span>
-          </button>
-          <button
-            onClick={onSignOut}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-rose-500/15 hover:border-rose-500/30 hover:text-rose-300 text-xs font-semibold text-white/70 transition-colors cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Sign Out</span>
-          </button>
         </div>
       </header>
 
@@ -218,9 +215,10 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
 
         {/* UPLOAD FORM */}
         <motion.section
+          id="graphics-upload"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-3xl bg-[#0b1739] border border-white/10 p-5 sm:p-6 space-y-4"
+          className="rounded-3xl bg-[#0b1739] border border-white/10 p-5 sm:p-6 space-y-4 scroll-mt-20"
         >
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-[#D4A017]/15 text-[#D4A017] border border-[#D4A017]/30">
@@ -297,7 +295,7 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
         </motion.section>
 
         {/* MY SUBMISSIONS */}
-        <section className="space-y-3">
+        <section id="graphics-subs" className="space-y-3 scroll-mt-20">
           <h2 className="font-bold text-sm flex items-center gap-2">
             <Star className="w-4 h-4 text-[#D4A017]" />
             My Submissions ({submissions.length})
@@ -410,6 +408,101 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
       <footer className="border-t border-white/10 bg-[#071126] px-6 py-3 text-center text-[10px] text-white/30 font-mono">
         Ultimate Scholars Academy • Graphics Design Studio
       </footer>
+      {/* COLLAPSIBLE SIDEBAR DRAWER */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={() => setIsDrawerOpen(false)}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+          <motion.aside
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className="relative w-72 max-w-[85vw] h-full bg-[#071126] border-r border-white/10 flex flex-col shadow-2xl"
+          >
+            {/* Sidebar header */}
+            <div className="shrink-0 p-4 border-b border-white/10 flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <ProfileAvatar profile={profile} onUpdated={onProfileUpdated} />
+                <div className="min-w-0">
+                  <p className="text-sm font-bold truncate">{profile.studentName}</p>
+                  <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full bg-[#D4A017]/15 text-[#D4A017] text-[10px] font-bold border border-[#D4A017]/30">
+                    <Palette className="w-2.5 h-2.5" />
+                    Graphics Track
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsDrawerOpen(false)}
+                className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                title="Close menu"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Sidebar body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-5">
+              <div className="space-y-2">
+                <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold px-1">Progress</p>
+                <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10">
+                  <span className="text-xs font-medium text-white/90">Assignments submitted</span>
+                  <span className="text-xs font-bold text-[#D4A017]">{submissions.length}</span>
+                </div>
+                <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10">
+                  <span className="text-xs font-medium text-white/90">Marked by teacher</span>
+                  <span className="text-xs font-bold text-emerald-400">{markedCount}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold px-1">Workspace</p>
+                <button
+                  onClick={() => scrollToSection('graphics-upload')}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#D4A017] hover:bg-[#b0820e] text-[#0F2557] font-bold text-xs transition-colors cursor-pointer shadow-sm"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Submit an Assignment</span>
+                </button>
+                <button
+                  onClick={() => scrollToSection('graphics-subs')}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium text-xs transition-colors cursor-pointer"
+                >
+                  <Star className="w-4 h-4 text-[#D4A017]" />
+                  <span>My Submissions</span>
+                  <span className="ml-auto px-1.5 py-0.5 bg-white/10 rounded-full text-[10px]">{submissions.length}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Sidebar footer */}
+            <div className="shrink-0 p-4 border-t border-white/10 space-y-2.5">
+              <button
+                onClick={handleSwitchToCoding}
+                className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-[#D4A017]/40 text-[#D4A017] font-semibold transition-colors cursor-pointer text-xs"
+                title="Move to the Coding Lab"
+              >
+                <Code2 className="w-3.5 h-3.5" />
+                <span>Switch to Coding Lab</span>
+              </button>
+              <button
+                onClick={onSignOut}
+                className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 hover:text-rose-100 font-semibold transition-colors cursor-pointer text-xs"
+                title="Sign out and return to the student login page"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Exit Studio</span>
+              </button>
+              <p className="text-[10px] text-white/30 text-center italic">
+                Ultimate Scholars Academy • Graphics Design Studio
+              </p>
+            </div>
+          </motion.aside>
+        </div>
+      )}
     </div>
   );
 }
