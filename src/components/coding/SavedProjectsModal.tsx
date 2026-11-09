@@ -285,6 +285,16 @@ export default function SavedProjectsModal({
                         <FileCode className="w-3 h-3" />
                         {proj.files['index.html'] ? `${proj.files['index.html'].length} chars` : 'empty'}
                       </span>
+                      {proj.grade ? (
+                        <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/40">
+                          Marked {proj.grade}/100
+                        </span>
+                      ) : null}
+                      {(proj.teacherComments?.length || 0) > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-[#D4A017]/20 text-[#D4A017] text-[10px] font-bold border border-[#D4A017]/40">
+                          {proj.teacherComments!.length} teacher comment{proj.teacherComments!.length === 1 ? '' : 's'}
+                        </span>
+                      )}
                     </div>
                   </div>
 

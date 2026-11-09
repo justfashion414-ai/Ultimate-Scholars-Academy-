@@ -24,7 +24,8 @@ import {
   CheckCircle2,
   LogOut,
   Menu,
-  X
+  X,
+  MessageSquare
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Editor from 'react-simple-code-editor';
@@ -58,6 +59,8 @@ const DEFAULT_FILES = {
 
 type MobilePane = 'code' | 'preview' | 'console';
 
+
+
 export default function CodingTraining() {
   const [files, setFiles] = useState(DEFAULT_FILES);
   const [activeFile, setActiveFile] = useState<keyof typeof DEFAULT_FILES>('index.html');
@@ -66,6 +69,27 @@ export default function CodingTraining() {
   const [isLivePreview, setIsLivePreview] = useState(true);
   const [currentProjectTitle, setCurrentProjectTitle] = useState('My Practice Code');
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [teacherFeedback, setTeacherFeedback] = useState<{ latest: string; count: number; grade?: string } | null>(null);
+
+  // Pull teacher feedback for the open project so students see marks live
+  useEffect(() => {
+    let cancelled = false;
+    if (!currentProjectId) { setTeacherFeedback(null); return; }
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'coding_projects', currentProjectId));
+        if (cancelled) return;
+        if (!snap.exists()) { setTeacherFeedback(null); return; }
+        const d = snap.data() as CodingProject;
+        const comments = d.teacherComments || [];
+        if (!comments.length && !d.grade) { setTeacherFeedback(null); return; }
+        setTeacherFeedback({ latest: comments[0]?.text || '', count: comments.length, grade: d.grade });
+      } catch {
+        if (!cancelled) setTeacherFeedback(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentProjectId]);
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
 
@@ -545,6 +569,14 @@ export default function CodingTraining() {
       </nav>
 
       {/* MAIN CONTENT AREA */}
+      {teacherFeedback && (
+        <div className="shrink-0 flex flex-wrap items-center gap-2 px-3 sm:px-5 py-2 bg-[#D4A017]/10 border-b border-[#D4A017]/25 text-[11px]">
+          <MessageSquare className="w-3.5 h-3.5 text-[#D4A017] shrink-0" />
+          <span className="font-bold text-[#D4A017]">Teacher feedback{teacherFeedback.grade ? ` · Marked ${teacherFeedback.grade}/100` : ''}:</span>
+          <span className="text-white/85 truncate">{teacherFeedback.latest}</span>
+          {teacherFeedback.count > 1 && <span className="text-white/40">(+{teacherFeedback.count - 1} more in My Projects)</span>}
+        </div>
+      )}
       <main className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
         {/* LEFT: CODE EDITOR */}
         <div className={`${mobileView === 'code' ? 'flex' : 'hidden'} lg:flex flex-1 min-h-0 min-w-0 flex-col border-b lg:border-b-0 lg:border-r border-white/10 bg-[#050E22]`}>

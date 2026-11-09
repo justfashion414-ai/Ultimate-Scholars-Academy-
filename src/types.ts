@@ -80,6 +80,13 @@ export interface CustomSection {
   subLabel?: string;
 }
 
+export interface TeacherComment {
+  id: string;
+  text: string;
+  author: string;
+  at: string;
+}
+
 export interface CodingProject {
   id: string;
   studentId: string;
@@ -94,6 +101,14 @@ export interface CodingProject {
   };
   createdAt: string;
   updatedAt: string;
+  /** Teacher/admin feedback left on the project (latest first when rendered). */
+  teacherComments?: TeacherComment[];
+  /** Score out of 100, empty string means unmarked. */
+  grade?: string;
+  /** Teacher starred/featured this project. */
+  starred?: boolean;
+  /** Who made the last change, e.g. "student" or "admin:<email>". */
+  lastEditedBy?: string;
 }
 
 export interface CodingStudentProfile {
