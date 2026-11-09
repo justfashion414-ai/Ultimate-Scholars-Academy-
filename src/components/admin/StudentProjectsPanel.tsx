@@ -46,7 +46,7 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
   const [live, setLive] = useState(false);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showStudents, setShowStudents] = useState(false);
+  const [mobileStudent, setMobileStudent] = useState('all');
 
   const [openProjectId, setOpenProjectId] = useState<string | null>(null);
   const [editFiles, setEditFiles] = useState<CodingProject['files']>({ 'index.html': '', 'styles.css': '', 'script.js': '' });
@@ -263,6 +263,14 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
     return studentMap.filter((s) => s.studentName.toLowerCase().includes(q));
   }, [studentMap, searchQuery]);
 
+  const visibleProjects = useMemo(() => {
+    let list = projects;
+    if (mobileStudent !== 'all') list = list.filter((p) => p.studentId === mobileStudent);
+    const q = searchQuery.trim().toLowerCase();
+    if (q) list = list.filter((p) => `${p.title} ${p.studentName || ''}`.toLowerCase().includes(q));
+    return list;
+  }, [projects, mobileStudent, searchQuery]);
+
   const markedCount = projects.filter((p) => p.grade && p.grade !== '').length;
   const starredCount = projects.filter((p) => p.starred).length;
 
@@ -426,16 +434,8 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
       </div>
 
       <div className="flex flex-col md:flex-row gap-4">
-        {/* STUDENT LIST (collapsible on mobile, below the projects) */}
-        <div className="md:w-60 shrink-0 space-y-2 order-2 md:order-1">
-          <button
-            onClick={() => setShowStudents((v) => !v)}
-            className="md:hidden w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-xs font-semibold cursor-pointer"
-          >
-            <span>Students ({filteredStudents.length})</span>
-            <ChevronDown className={`w-4 h-4 transition-transform ${showStudents ? 'rotate-180' : ''}`} />
-          </button>
-          <div className={`space-y-2 ${showStudents ? '' : 'hidden'} md:block`}>
+        {/* STUDENT LIST (desktop only; mobile picks students from the dropdown) */}
+        <div className="hidden md:block md:w-60 shrink-0 space-y-2">
           <div className="relative">
             <Search className="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -459,18 +459,42 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
               </div>
             ))}
           </div>
-          </div>
         </div>
 
-        {/* PROJECT LIST (all, newest first) */}
+        {/* PROJECT LIST (mobile: the only list, filtered by the picker above) */}
         <div className="flex-1 min-w-0 space-y-2 order-1 md:order-2">
-          {projects.length === 0 && (
+          <div className="md:hidden space-y-2">
+            <select
+              value={mobileStudent}
+              onChange={(e) => setMobileStudent(e.target.value)}
+              className="w-full px-3 py-3 rounded-xl bg-black/40 border border-white/10 text-xs font-semibold focus:outline-none focus:border-[#D4A017]/60 cursor-pointer"
+            >
+              <option value="all">All students ({projects.length} projects)</option>
+              {studentMap.map((s) => (
+                <option key={s.studentId} value={s.studentId}>{s.studentName} ({s.projects.length})</option>
+              ))}
+            </select>
+            <div className="relative">
+              <Search className="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search projects by title or student..."
+                className="w-full pl-9 pr-3 py-3 rounded-xl bg-black/40 border border-white/10 text-xs focus:outline-none focus:border-[#D4A017]/60"
+              />
+            </div>
+          </div>
+          {visibleProjects.length === 0 && (
             <div className="p-8 text-center rounded-2xl bg-white/[0.03] border border-white/10">
               <Sparkles className="w-6 h-6 text-white/30 mx-auto mb-2" />
-              <p className="text-xs text-white/50">No projects saved yet. They appear here live once students save work in the coding lab.</p>
+              <p className="text-xs text-white/50">
+                {projects.length === 0
+                  ? 'No projects saved yet. They appear here live once students save work in the coding lab.'
+                  : 'No projects match this student or search.'}
+              </p>
             </div>
           )}
-          {projects.map((p) => (
+          {visibleProjects.map((p) => (
             <button
               key={p.id}
               onClick={() => openDetail(p)}
