@@ -25,7 +25,8 @@ import {
   LogOut,
   Menu,
   X,
-  MessageSquare
+  MessageSquare,
+  Palette
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Editor from 'react-simple-code-editor';
@@ -45,7 +46,7 @@ import SavedProjectsModal from './coding/SavedProjectsModal';
 import TeacherMonitorModal from './coding/TeacherMonitorModal';
 import { CodingTemplate } from './coding/templates';
 import { CodingProject, CodingStudentProfile } from '../types';
-import { saveCodingProject, fetchStudentCodingProjects } from '../lib/firebaseService';
+import { saveCodingProject, fetchStudentCodingProjects, saveStudentProfile } from '../lib/firebaseService';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import ForcePasswordSetup from './ForcePasswordSetup';
@@ -460,6 +461,14 @@ export default function CodingTraining() {
       />
     );
   }
+
+  // TRACK SWITCH: a student can move between the coding lab and the graphics studio
+  const handleSwitchTrack = async (newTrack: 'coding' | 'graphics') => {
+    if (!currentStudent || currentStudent.track === newTrack) return;
+    const updated: CodingStudentProfile = { ...currentStudent, track: newTrack };
+    await saveStudentProfile(updated);
+    handleSaveStudentProfile(updated);
+  };
 
   // GRAPHICS TRACK: graphics students land in the design studio, not the code lab
   if ((currentStudent.track || 'coding') === 'graphics') {
@@ -902,6 +911,14 @@ export default function CodingTraining() {
 
               {/* Sidebar footer */}
               <div className="shrink-0 p-4 border-t border-white/10 space-y-2.5">
+                <button
+                  onClick={() => { setIsDrawerOpen(false); handleSwitchTrack('graphics'); }}
+                  className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-[#D4A017]/40 text-[#D4A017] font-semibold transition-colors cursor-pointer text-xs"
+                  title="Move to the Graphics Design Studio"
+                >
+                  <Palette className="w-3.5 h-3.5" />
+                  <span>Switch to Graphics Studio</span>
+                </button>
                 <button
                   onClick={() => setShowExitConfirm(true)}
                   className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 hover:text-rose-100 font-semibold transition-colors cursor-pointer text-xs"

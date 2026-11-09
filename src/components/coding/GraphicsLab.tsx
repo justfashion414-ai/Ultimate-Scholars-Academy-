@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import {
-  Palette, Upload, Loader2, Trash2, MessageSquare, Award, ImagePlus,
+  Palette, Upload, Loader2, Trash2, MessageSquare, Award, ImagePlus, Code2,
   LogOut, ArrowLeft, CheckCircle2, AlertCircle, X, Star, Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firesto
 import { db } from '../../lib/firebase';
 import { uploadToCloudinary, deleteFromCloudinary } from '../../lib/cloudinaryService';
 import { CodingStudentProfile, GraphicsSubmission } from '../../types';
+import { saveStudentProfile } from '../../lib/firebaseService';
 import ProfileAvatar from './ProfileAvatar';
 
 interface GraphicsLabProps {
@@ -135,6 +136,12 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
 
   const markedCount = submissions.filter((s) => s.grade).length;
 
+  const handleSwitchToCoding = async () => {
+    const updated: CodingStudentProfile = { ...profile, track: 'coding' };
+    await saveStudentProfile(updated);
+    onProfileUpdated(updated);
+  };
+
   return (
     <div className="min-h-screen bg-[#050E22] text-white flex flex-col font-sans selection:bg-[#D4A017] selection:text-[#0F2557]">
       {/* HEADER */}
@@ -157,6 +164,15 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
+          <button
+            onClick={handleSwitchToCoding}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-[#D4A017]/40 text-[#D4A017] hover:bg-[#D4A017]/10 text-xs font-semibold transition-colors cursor-pointer"
+            title="Move to the Coding Lab"
+          >
+            <Code2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Switch to Coding Lab</span>
+            <span className="sm:hidden">Coding</span>
+          </button>
           <button
             onClick={onSignOut}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-rose-500/15 hover:border-rose-500/30 hover:text-rose-300 text-xs font-semibold text-white/70 transition-colors cursor-pointer"
