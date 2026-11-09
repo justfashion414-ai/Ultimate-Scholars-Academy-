@@ -95,7 +95,7 @@ async function verifyIdToken(idToken: string): Promise<{ uid: string; email?: st
   const certsMap = await getGoogleCerts();
   const certPem = certsMap[header.kid];
   if (!certPem) throw new Error('unknown token signing key');
-  const verifier = crypto.createVerify('RS256');
+  const verifier = crypto.createVerify('RSA-SHA256');
   verifier.update(`${parts[0]}.${parts[1]}`);
   const x509 = new crypto.X509Certificate(certPem);
   const ok = verifier.verify(x509.publicKey, Buffer.from(parts[2], 'base64'));
@@ -194,7 +194,7 @@ export async function handler(event: any) {
       return json(400, { error: 'Provide a valid administrator email.' });
     }
     const targetAdminDoc = await firestoreGet(token, `admins/${encodeURIComponent(targetEmail)}`);
-    if (!targetAdminDoc) return json(404, { error: `${targetEmail} is not on the authorized administrators list.` });
+    if (!targetAdminDoc && !HARDCODED_ADMINS.includes(targetEmail)) return json(404, { error: `${targetEmail} is not on the authorized administrators list.` });
 
     const tempPassword = generateTempPassword();
 
