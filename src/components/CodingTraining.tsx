@@ -60,7 +60,7 @@ const DEFAULT_FILES = {
   'script.js': ''
 };
 
-type MobilePane = 'code' | 'preview' | 'console';
+type MobilePane = 'code' | 'preview';
 
 
 
@@ -565,12 +565,11 @@ export default function CodingTraining() {
         <ProfileAvatar profile={currentStudent} onUpdated={handleSaveStudentProfile} onSignOut={() => setShowExitConfirm(true)} />
       </header>
 
-      {/* MOBILE PANE SWITCHER: Code / Preview / Console */}
-      <nav className="lg:hidden shrink-0 grid grid-cols-3 gap-1.5 p-1.5 bg-[#071126] border-b border-white/10">
+      {/* MOBILE PANE SWITCHER: Code / Preview */}
+      <nav className="lg:hidden shrink-0 grid grid-cols-2 gap-1.5 p-1.5 bg-[#071126] border-b border-white/10">
         {([
           { id: 'code' as MobilePane, label: 'Code', icon: <FileCode className="w-3.5 h-3.5" /> },
           { id: 'preview' as MobilePane, label: 'Preview', icon: <Laptop className="w-3.5 h-3.5" /> },
-          { id: 'console' as MobilePane, label: 'Console', icon: <Terminal className="w-3.5 h-3.5" /> },
         ]).map((tab) => (
           <button
             key={tab.id}
@@ -583,11 +582,6 @@ export default function CodingTraining() {
           >
             {tab.icon}
             <span>{tab.label}</span>
-            {tab.id === 'console' && output.length > 0 && (
-              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${mobileView === tab.id ? 'bg-[#0F2557] text-[#D4A017]' : 'bg-white/10 text-white/70'}`}>
-                {output.length}
-              </span>
-            )}
           </button>
         ))}
       </nav>
@@ -740,7 +734,7 @@ export default function CodingTraining() {
           </div>
 
           {/* CONSOLE OUTPUT */}
-          <div className={`${mobileView === 'console' ? 'flex' : 'hidden'} lg:flex flex-1 min-h-0 flex-col bg-black/40`}>
+          <div className="hidden lg:flex flex-1 min-h-0 flex-col bg-black/40">
             <div className="shrink-0 flex items-center justify-between px-4 py-2 bg-black/40 border-b border-white/5">
               <div className="flex items-center gap-2 text-white/50 font-bold text-[10px] uppercase tracking-wider">
                 <Terminal className="w-3.5 h-3.5" />
@@ -896,13 +890,13 @@ export default function CodingTraining() {
                     Docs
                   </p>
                   <div className="grid grid-cols-3 gap-1.5">
-                    <a href="https://developer.mozilla.org/en-US/docs/Web/HTML" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/70 hover:text-[#D4A017] transition-colors">
+                    <a href="https://developer.mozilla.org/en-US/docs/Web/HTML" target="_blank" rel="noreferrer" onClick={() => setIsDrawerOpen(false)} className="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/70 hover:text-[#D4A017] transition-colors">
                       HTML <ExternalLink className="w-2.5 h-2.5" />
                     </a>
-                    <a href="https://developer.mozilla.org/en-US/docs/Web/CSS" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/70 hover:text-[#D4A017] transition-colors">
+                    <a href="https://developer.mozilla.org/en-US/docs/Web/CSS" target="_blank" rel="noreferrer" onClick={() => setIsDrawerOpen(false)} className="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/70 hover:text-[#D4A017] transition-colors">
                       CSS <ExternalLink className="w-2.5 h-2.5" />
                     </a>
-                    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/70 hover:text-[#D4A017] transition-colors">
+                    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" rel="noreferrer" onClick={() => setIsDrawerOpen(false)} className="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/70 hover:text-[#D4A017] transition-colors">
                       JS <ExternalLink className="w-2.5 h-2.5" />
                     </a>
                   </div>

@@ -458,7 +458,7 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
 
       <div className="flex flex-col md:flex-row gap-4">
         {/* STUDENT LIST */}
-        <div className="md:w-60 shrink-0 space-y-2">
+        <div className="md:w-60 shrink-0 space-y-2 order-2 md:order-1">
           <div className="relative">
             <Search className="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -485,7 +485,7 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
         </div>
 
         {/* PROJECT LIST (all, newest first) */}
-        <div className="flex-1 min-w-0 space-y-2">
+        <div className="flex-1 min-w-0 space-y-2 order-1 md:order-2">
           {projects.length === 0 && (
             <div className="p-8 text-center rounded-2xl bg-white/[0.03] border border-white/10">
               <Sparkles className="w-6 h-6 text-white/30 mx-auto mb-2" />
