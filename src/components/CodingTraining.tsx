@@ -44,7 +44,7 @@ import SavedProjectsModal from './coding/SavedProjectsModal';
 import TeacherMonitorModal from './coding/TeacherMonitorModal';
 import { CodingTemplate } from './coding/templates';
 import { CodingProject, CodingStudentProfile } from '../types';
-import { saveCodingProject } from '../lib/firebaseService';
+import { saveCodingProject, fetchStudentCodingProjects } from '../lib/firebaseService';
 import { auth } from '../lib/firebase';
 
 // IMPORTANT: Editor starts COMPLETELY EMPTY by default as requested.
@@ -88,6 +88,59 @@ export default function CodingTraining() {
   });
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // AUTO-LOAD: when a student opens the Lab, bring back their most recent
+  // saved project so the editor shows their code instead of an empty page.
+  // Local mirror is read first for an instant restore; the cloud copy is
+  // merged in (picks up work saved on another device).
+  const restoredRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!currentStudent) {
+      restoredRef.current = null;
+      return;
+    }
+    if (restoredRef.current === currentStudent.studentId) return;
+    restoredRef.current = currentStudent.studentId;
+
+    const byNewest = (a: CodingProject, b: CodingProject) =>
+      new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime();
+    const applyProject = (latest: CodingProject) => {
+      if (!latest || !latest.files) return;
+      setFiles({
+        'index.html': latest.files['index.html'] || '',
+        'styles.css': latest.files['styles.css'] || '',
+        'script.js': latest.files['script.js'] || ''
+      });
+      setCurrentProjectTitle(latest.title || 'My Practice Code');
+      setCurrentProjectId(latest.id);
+      setSaveStatus('saved');
+      if (latest.updatedAt || latest.createdAt) {
+        setLastSavedTime(new Date(latest.updatedAt || latest.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      }
+      setTimeout(runCode, 100);
+    };
+
+    let cancelled = false;
+    const localKey = `scholars_coding_projects_${currentStudent.studentId}`;
+    try {
+      const localProjects: CodingProject[] = JSON.parse(localStorage.getItem(localKey) || '[]');
+      if (localProjects.length > 0) {
+        applyProject([...localProjects].sort(byNewest)[0]);
+      }
+    } catch (e) {
+      // Local restore failed; fall through to the cloud fetch
+    }
+
+    fetchStudentCodingProjects(currentStudent.studentId)
+      .then((cloudProjects) => {
+        if (cancelled || !cloudProjects || cloudProjects.length === 0) return;
+        applyProject([...cloudProjects].sort(byNewest)[0]);
+      })
+      .catch(() => {
+        // Offline or permissions issue: the local restore above already applied
+      });
+    return () => { cancelled = true; };
+  }, [currentStudent]);
 
   // Sync auth state for email/password student accounts
   useEffect(() => {
