@@ -21,7 +21,6 @@ import {
   Check,
   AlertCircle,
   CloudCheck,
-  CheckCircle2,
   LogOut,
   Menu,
   X,
@@ -496,7 +495,7 @@ export default function CodingTraining() {
       <style>{`
         .code-editor {
           font-family: 'Fira Code', 'Cascadia Code', 'Source Code Pro', monospace !important;
-          font-size: 14px !important;
+          font-size: 15px !important;
           line-height: 1.6 !important;
         }
         .code-editor textarea {
@@ -515,7 +514,7 @@ export default function CodingTraining() {
       `}</style>
 
       {/* TOP HEADER: single clean bar. Everything else lives in the sidebar. */}
-      <header className="h-14 shrink-0 border-b border-white/10 flex items-center justify-between px-2 sm:px-5 bg-[#0F2557] select-none z-30">
+      <header className="h-16 shrink-0 border-b border-white/10 flex items-center justify-between px-3 sm:px-5 bg-[#0F2557] select-none z-30">
         <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
           {/* Collapsible sidebar button */}
           <button
@@ -537,7 +536,7 @@ export default function CodingTraining() {
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-sm font-bold tracking-tight truncate">Coding Lab</h1>
+                <h1 className="text-base font-bold tracking-tight truncate">Coding Lab</h1>
                 <span className="hidden sm:inline text-[10px] bg-white/10 text-[#D4A017] px-2 py-0.5 rounded-full font-bold">
                   Class of 2026
                 </span>
@@ -555,7 +554,7 @@ export default function CodingTraining() {
         {/* RUN: always visible, one tap away on every screen size */}
         <button 
           onClick={runCode}
-          className="flex items-center gap-1.5 px-4 sm:px-5 py-2 rounded-xl bg-[#D4A017] hover:bg-[#b0820e] text-[#0F2557] font-bold text-xs shadow-lg transition-all active:scale-95 cursor-pointer shrink-0"
+          className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#D4A017] hover:bg-[#b0820e] text-[#0F2557] font-bold text-sm shadow-lg transition-all active:scale-95 cursor-pointer shrink-0"
           title="Run your code now"
         >
           <Play className="w-3.5 h-3.5 fill-current" />
@@ -568,13 +567,13 @@ export default function CodingTraining() {
       {/* MOBILE PANE SWITCHER: Code / Preview */}
       <nav className="lg:hidden shrink-0 grid grid-cols-2 gap-1.5 p-1.5 bg-[#071126] border-b border-white/10">
         {([
-          { id: 'code' as MobilePane, label: 'Code', icon: <FileCode className="w-3.5 h-3.5" /> },
-          { id: 'preview' as MobilePane, label: 'Preview', icon: <Laptop className="w-3.5 h-3.5" /> },
+          { id: 'code' as MobilePane, label: 'Code', icon: <FileCode className="w-4 h-4" /> },
+          { id: 'preview' as MobilePane, label: 'Preview', icon: <Laptop className="w-4 h-4" /> },
         ]).map((tab) => (
           <button
             key={tab.id}
             onClick={() => switchMobileView(tab.id)}
-            className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-bold transition-all cursor-pointer ${
               mobileView === tab.id
                 ? 'bg-[#D4A017] text-[#0F2557] shadow'
                 : 'text-white/50 hover:text-white/80 hover:bg-white/5'
@@ -602,12 +601,11 @@ export default function CodingTraining() {
           <div className="shrink-0 flex items-center justify-between p-2 bg-[#0F2557]/50 border-b border-white/5 overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-1">
               {(['index.html', 'styles.css', 'script.js'] as const).map((fileName) => {
-                const charCount = files[fileName].length;
                 return (
                   <button
                     key={fileName}
                     onClick={() => setActiveFile(fileName)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-[13px] font-medium transition-all cursor-pointer whitespace-nowrap ${
                       activeFile === fileName 
                         ? 'bg-white/10 text-[#D4A017] shadow-sm font-semibold' 
                         : 'text-white/40 hover:text-white/70 hover:bg-white/5'
@@ -617,9 +615,6 @@ export default function CodingTraining() {
                     {fileName.endsWith('.css') && <FileText className="w-3.5 h-3.5 text-sky-400" />}
                     {fileName.endsWith('.js') && <FileJson className="w-3.5 h-3.5 text-amber-400" />}
                     <span>{fileName}</span>
-                    {charCount > 0 && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#D4A017]" />
-                    )}
                   </button>
                 );
               })}
@@ -641,7 +636,7 @@ export default function CodingTraining() {
               className="code-editor min-h-full"
               style={{
                 fontFamily: '"Fira Code", "Cascadia Code", "Source Code Pro", monospace',
-                fontSize: 14,
+                fontSize: 15,
                 backgroundColor: 'transparent',
               }}
             />
@@ -821,10 +816,6 @@ export default function CodingTraining() {
                       ? `ID: ${currentStudent.loginIdentifier || currentStudent.studentId.replace('student_', '').toUpperCase()}`
                       : currentStudent.studentEmail}
                   </span>
-                  <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{saveStatusText}</span>
-                  </div>
                 </div>
 
                 {/* Workspace actions */}

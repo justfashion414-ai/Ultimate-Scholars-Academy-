@@ -37,6 +37,7 @@ export default function GraphicsSubmissionsPanel({ onDataChange }: { onDataChang
   const [isDeleting, setIsDeleting] = useState(false);
   const [toast, setToast] = useState('');
   const [viewer, setViewer] = useState<GraphicsSubmission | null>(null);
+  const [viewerIdx, setViewerIdx] = useState(0);
 
   useEffect(() => {
     const unsub = onSnapshot(
@@ -140,7 +141,7 @@ export default function GraphicsSubmissionsPanel({ onDataChange }: { onDataChang
     setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'graphics_submissions', toDelete.id));
-      deleteFromCloudinary(toDelete.imageUrl).catch(() => {});
+      (toDelete.imageUrls?.length ? toDelete.imageUrls : [toDelete.imageUrl]).forEach((u) => deleteFromCloudinary(u).catch(() => {}));
       setToDelete(null);
       if (openId === toDelete.id) setOpenId(null);
       flash('Submission deleted.');
@@ -198,6 +199,7 @@ export default function GraphicsSubmissionsPanel({ onDataChange }: { onDataChang
 
   if (openSub) {
     const comments = openSub.teacherComments || [];
+    const urls = openSub.imageUrls?.length ? openSub.imageUrls : [openSub.imageUrl];
     return (
       <div className="p-4 sm:p-6 space-y-4">
         <div className="flex flex-wrap items-center gap-3">
@@ -255,11 +257,25 @@ export default function GraphicsSubmissionsPanel({ onDataChange }: { onDataChang
           <div className="lg:col-span-3 space-y-3">
             <div className="rounded-2xl border border-white/10 bg-[#081533] p-3">
               <img
-                src={openSub.imageUrl}
+                src={urls[0]}
                 alt={openSub.title}
                 className="w-full max-h-[480px] object-contain rounded-xl cursor-zoom-in"
-                onClick={() => setViewer(openSub)}
+                onClick={() => { setViewer(openSub); setViewerIdx(0); }}
               />
+              {urls.length > 1 && (
+                <div className="grid grid-cols-5 gap-1.5 mt-2">
+                  {urls.map((u, i) => (
+                    <button
+                      key={u}
+                      onClick={() => { setViewer(openSub); setViewerIdx(i); }}
+                      title={`Image ${i + 1}`}
+                      className="aspect-square rounded-lg overflow-hidden border border-white/10 hover:border-[#D4A017]/60 cursor-pointer"
+                    >
+                      <img src={u} alt={`${openSub.title} ${i + 1}`} className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="flex items-center justify-between mt-2.5">
                 <p className="text-[11px] text-white/40">{openSub.description || 'No notes from the student.'}</p>
                 <a
@@ -336,11 +352,29 @@ export default function GraphicsSubmissionsPanel({ onDataChange }: { onDataChang
           </div>
         </div>
 
-        {viewer && (
-          <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-6 cursor-zoom-out" onClick={() => setViewer(null)}>
-            <img src={viewer.imageUrl} alt={viewer.title} className="max-w-full max-h-full object-contain rounded-xl" />
-          </div>
-        )}
+        {viewer && (() => {
+          const vUrls = viewer.imageUrls?.length ? viewer.imageUrls : [viewer.imageUrl];
+          return (
+            <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4 sm:p-6 cursor-zoom-out" onClick={() => setViewer(null)}>
+              <div className="max-w-full max-h-full flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                <img src={vUrls[Math.min(viewerIdx, vUrls.length - 1)]} alt={viewer.title} className="max-w-full max-h-[80vh] object-contain rounded-xl" />
+                {vUrls.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto max-w-full">
+                    {vUrls.map((u, i) => (
+                      <img
+                        key={u}
+                        src={u}
+                        alt={`${viewer.title} ${i + 1}`}
+                        className={`w-12 h-12 rounded-lg object-cover border-2 cursor-pointer shrink-0 ${i === viewerIdx ? 'border-[#D4A017]' : 'border-white/20'}`}
+                        onClick={() => setViewerIdx(i)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {toDelete && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80">
@@ -473,6 +507,11 @@ export default function GraphicsSubmissionsPanel({ onDataChange }: { onDataChang
               <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/70 text-[9px] font-bold text-[#D4A017] border border-[#D4A017]/30">
                 {g.studentName}
               </span>
+              {(g.imageUrls?.length || 0) > 1 && (
+                <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-full bg-black/70 text-[9px] font-bold text-white/90 border border-white/20">
+                  {g.imageUrls!.length} images
+                </span>
+              )}
               {g.grade ? (
                 <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-500/90 text-[9px] font-bold text-[#04140d]">
                   {g.grade}/100

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Code2, Search, Eye, Trash2, Star, MessageSquare, Save, Loader2,
-  AlertTriangle, X, Clock, Award, ChevronLeft, CheckCircle2, User, Sparkles
+  AlertTriangle, X, Clock, Award, ChevronLeft, CheckCircle2, User, Sparkles, ChevronDown
 } from 'lucide-react';
 import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
@@ -46,6 +46,7 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
   const [live, setLive] = useState(false);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showStudents, setShowStudents] = useState(false);
 
   const [openProjectId, setOpenProjectId] = useState<string | null>(null);
   const [editFiles, setEditFiles] = useState<CodingProject['files']>({ 'index.html': '', 'styles.css': '', 'script.js': '' });
@@ -320,42 +321,13 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
           </button>
         </div>
 
-        {/* TABS + EDITOR */}
+        {/* LIVE PREVIEW (full height, no file tabs) */}
         <div className="rounded-2xl border border-white/10 overflow-hidden bg-[#081533]">
-          <div className="flex items-center gap-1 px-2 py-2 border-b border-white/10 overflow-x-auto">
-            {(['preview', 'index.html', 'styles.css', 'script.js'] as FileTab[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => setEditTab(t)}
-                className={`px-3 py-1.5 rounded-lg text-[11px] font-mono font-semibold transition-colors cursor-pointer whitespace-nowrap ${editTab === t ? 'bg-[#D4A017] text-[#030914]' : 'text-white/60 hover:bg-white/10'}`}
-              >
-                {t === 'preview' ? 'Live preview' : t}
-              </button>
-            ))}
-            {editTab !== 'preview' && (
-              <button
-                onClick={saveChanges}
-                disabled={saving || !dirty}
-                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 text-[#04140d] text-[11px] font-bold hover:bg-emerald-400 disabled:opacity-40 cursor-pointer"
-              >
-                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                {dirty ? 'Save changes' : 'Saved'}
-              </button>
-            )}
+          <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-white/50">Live preview</span>
+            <span className="text-[10px] text-white/30 font-mono">{(openProject.files?.['index.html'] || '').length} chars of HTML</span>
           </div>
-          {editTab === 'preview' ? (
-            <iframe title="Project preview" srcDoc={previewHtml} sandbox="allow-scripts allow-modals" className="w-full h-[420px] bg-white" />
-          ) : (
-            <textarea
-              value={editFiles[editTab as 'index.html' | 'styles.css' | 'script.js']}
-              onChange={(e) => {
-                setEditFiles((f) => ({ ...f, [editTab]: e.target.value }));
-                setDirty(true);
-              }}
-              spellCheck={false}
-              className="w-full h-[420px] p-4 bg-black/50 text-emerald-200/90 font-mono text-xs leading-relaxed focus:outline-none resize-none"
-            />
-          )}
+          <iframe title="Project preview" srcDoc={previewHtml} sandbox="allow-scripts allow-modals" className="w-full h-[70vh] min-h-[480px] bg-white" />
         </div>
 
         {/* FEEDBACK */}
@@ -428,13 +400,10 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
         </div>
         <div>
           <h3 className="font-serif font-bold text-lg">Student Projects</h3>
-          <p className="text-xs text-white/50 flex items-center gap-2">
-            {live ? (
-              <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live: updates the moment a student saves</>
-            ) : (
-              <><Loader2 className="w-3 h-3 animate-spin" /> Connecting to live updates...</>
-            )}
-          </p>
+          <span
+            className={`w-2 h-2 rounded-full inline-block ${live ? 'bg-emerald-400 animate-pulse' : 'bg-white/30'}`}
+            title={live ? 'Live' : 'Connecting...'}
+          />
         </div>
       </div>
 
@@ -457,8 +426,16 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
       </div>
 
       <div className="flex flex-col md:flex-row gap-4">
-        {/* STUDENT LIST */}
+        {/* STUDENT LIST (collapsible on mobile, below the projects) */}
         <div className="md:w-60 shrink-0 space-y-2 order-2 md:order-1">
+          <button
+            onClick={() => setShowStudents((v) => !v)}
+            className="md:hidden w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-xs font-semibold cursor-pointer"
+          >
+            <span>Students ({filteredStudents.length})</span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showStudents ? 'rotate-180' : ''}`} />
+          </button>
+          <div className={`space-y-2 ${showStudents ? '' : 'hidden'} md:block`}>
           <div className="relative">
             <Search className="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -481,6 +458,7 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
                 {s.projects.some((p) => p.starred) && <Star className="w-3.5 h-3.5 text-[#D4A017] fill-[#D4A017] shrink-0" />}
               </div>
             ))}
+          </div>
           </div>
         </div>
 

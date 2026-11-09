@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import {
   Palette, Upload, Loader2, Trash2, MessageSquare, Award, ImagePlus, Code2,
-  LogOut, ArrowLeft, CheckCircle2, AlertCircle, X, Star, Clock, Menu
+  LogOut, ArrowLeft, CheckCircle2, AlertCircle, X, Star, Clock, Menu, Search
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
@@ -33,8 +33,9 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
   const [submissions, setSubmissions] = useState<GraphicsSubmission[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [subFilter, setSubFilter] = useState('');
   const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -62,42 +63,58 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
     return () => unsub();
   }, [profile.studentId]);
 
-  const pickFile = (f: File | null) => {
-    if (!f) return;
-    if (!f.type.startsWith('image/')) {
-      setErrorMsg('Please choose an image file (JPG, PNG, WebP).');
+  const MAX_IMAGES = 10;
+
+  const pickFiles = (incoming: FileList | null) => {
+    if (!incoming || incoming.length === 0) return;
+    const room = MAX_IMAGES - files.length;
+    if (room <= 0) {
+      setErrorMsg(`You can attach up to ${MAX_IMAGES} images per assignment.`);
       return;
     }
-    if (f.size > 10 * 1024 * 1024) {
-      setErrorMsg('Image too large. Maximum 10 MB.');
-      return;
+    const accepted: File[] = [];
+    for (const f of Array.from(incoming).slice(0, room)) {
+      if (!f.type.startsWith('image/')) { setErrorMsg('Please choose image files (JPG, PNG, WebP).'); continue; }
+      if (f.size > 10 * 1024 * 1024) { setErrorMsg('One of the images is too large. Maximum 10 MB each.'); continue; }
+      accepted.push(f);
     }
+    if (accepted.length === 0) return;
     setErrorMsg('');
-    setFile(f);
-    setPreviewUrl(URL.createObjectURL(f));
+    setFiles((prev) => [...prev, ...accepted]);
+    setPreviews((prev) => [...prev, ...accepted.map((f) => URL.createObjectURL(f))]);
+  };
+
+  const removeImage = (idx: number) => {
+    setPreviews((prev) => { URL.revokeObjectURL(prev[idx]); return prev.filter((_, i) => i !== idx); });
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const clearForm = () => {
     setTitle('');
     setDescription('');
-    setFile(null);
-    setPreviewUrl('');
+    previews.forEach((u) => URL.revokeObjectURL(u));
+    setFiles([]);
+    setPreviews([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleUpload = async () => {
-    if (!title.trim() || !file) {
-      setErrorMsg('Give your assignment a title and choose an image first.');
+    if (!title.trim() || files.length === 0) {
+      setErrorMsg('Give your assignment a title and choose at least one image first.');
       return;
     }
     setUploading(true);
     setErrorMsg('');
     setNotice('');
     try {
-      const imageUrl = await uploadToCloudinary(file, {
-        folder: 'scholars_class_2026/graphics',
-        filename: `${profile.studentId}_${title.trim().replace(/\s+/g, '_').slice(0, 40)}`
-      });
+      const urls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        setNotice(`Uploading image ${i + 1} of ${files.length}...`);
+        urls.push(await uploadToCloudinary(files[i], {
+          folder: 'scholars_class_2026/graphics',
+          filename: `${profile.studentId}_${title.trim().replace(/\s+/g, '_').slice(0, 40)}_${i + 1}`
+        }));
+      }
       const newId = `gfx_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       const submission: GraphicsSubmission = {
         id: newId,
@@ -105,7 +122,8 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
         studentName: profile.studentName,
         title: title.trim(),
         ...(description.trim() ? { description: description.trim() } : {}),
-        imageUrl,
+        imageUrl: urls[0],
+        imageUrls: urls,
         createdAt: new Date().toISOString()
       };
       await setDoc(doc(db, 'graphics_submissions', newId), submission);
@@ -124,7 +142,7 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
     setDeleting(true);
     try {
       await deleteDoc(doc(db, 'graphics_submissions', toDelete.id));
-      deleteFromCloudinary(toDelete.imageUrl).catch(() => {});
+      (toDelete.imageUrls?.length ? toDelete.imageUrls : [toDelete.imageUrl]).forEach((u) => deleteFromCloudinary(u).catch(() => {}));
       setToDelete(null);
       setNotice('Submission removed.');
       setTimeout(() => setNotice(''), 2500);
@@ -136,6 +154,9 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
   };
 
   const markedCount = submissions.filter((s) => s.grade).length;
+  const filteredSubs = subFilter.trim()
+    ? submissions.filter((s) => `${s.title} ${s.description || ''}`.toLowerCase().includes(subFilter.trim().toLowerCase()))
+    : submissions;
 
   const scrollToSection = (id: string) => {
     setIsDrawerOpen(false);
@@ -258,29 +279,53 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
             <label className="block text-xs font-semibold text-white/80 mb-1.5">
               Your Design <span className="text-amber-400">*</span>
             </label>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className={`w-full border-2 border-dashed rounded-2xl p-5 text-center transition-colors cursor-pointer ${
-                previewUrl ? 'border-[#D4A017]/50 bg-[#D4A017]/5' : 'border-white/15 hover:border-white/30 bg-white/[0.03]'
-              }`}
-            >
-              {previewUrl ? (
-                <img src={previewUrl} alt="Selected design" className="max-h-56 mx-auto rounded-xl shadow-lg" />
-              ) : (
+            {previews.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full border-2 border-dashed rounded-2xl p-5 text-center transition-colors cursor-pointer border-white/15 hover:border-white/30 bg-white/[0.03]"
+              >
                 <div className="space-y-1.5 py-3">
                   <ImagePlus className="w-7 h-7 mx-auto text-white/30" />
-                  <p className="text-xs text-white/60 font-semibold">Tap to choose an image</p>
-                  <p className="text-[10px] text-white/40">JPG, PNG or WebP, up to 10 MB</p>
+                  <p className="text-xs text-white/60 font-semibold">Tap to choose images</p>
+                  <p className="text-[10px] text-white/40">Add up to {MAX_IMAGES} images per assignment · JPG, PNG or WebP, up to 10 MB each</p>
                 </div>
-              )}
-            </button>
+              </button>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                {previews.map((url, idx) => (
+                  <div key={url} className="relative">
+                    <img src={url} alt={`Design ${idx + 1}`} className="w-full aspect-square object-cover rounded-xl border border-white/15" />
+                    <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/70 text-[9px] font-bold text-white/90">{idx + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 text-white/80 hover:text-rose-300 cursor-pointer"
+                      title="Remove this image"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+                {previews.length < MAX_IMAGES && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="aspect-square rounded-xl border-2 border-dashed border-white/20 hover:border-[#D4A017]/60 flex flex-col items-center justify-center gap-1 cursor-pointer"
+                  >
+                    <ImagePlus className="w-5 h-5 text-white/40" />
+                    <span className="text-[10px] text-white/50 font-semibold">Add more</span>
+                  </button>
+                )}
+              </div>
+            )}
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
-              onChange={(e) => pickFile(e.target.files?.[0] || null)}
+              onChange={(e) => pickFiles(e.target.files)}
             />
           </div>
 
@@ -302,6 +347,18 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-1" title="Live" />
           </h2>
 
+          {submissions.length > 0 && (
+            <div className="relative">
+              <Search className="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                value={subFilter}
+                onChange={(e) => setSubFilter(e.target.value)}
+                placeholder="Filter my assignments by title or notes..."
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-white/30 focus:outline-none focus:border-[#D4A017]"
+              />
+            </div>
+          )}
+
           {submissions.length === 0 && (
             <div className="p-8 text-center rounded-2xl bg-white/[0.03] border border-white/10">
               <Palette className="w-8 h-8 mx-auto text-white/20 mb-2" />
@@ -309,15 +366,28 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
             </div>
           )}
 
-          {submissions.map((sub) => (
+          {submissions.length > 0 && filteredSubs.length === 0 && (
+            <div className="p-6 text-center rounded-2xl bg-white/[0.03] border border-white/10">
+              <p className="text-xs text-white/50">No assignment matches that filter.</p>
+            </div>
+          )}
+
+          {filteredSubs.map((sub) => (
             <div key={sub.id} className="rounded-2xl bg-[#0b1739] border border-white/10 overflow-hidden">
               <div className="flex gap-3 p-3">
-                <img
-                  src={sub.imageUrl}
-                  alt={sub.title}
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover border border-white/10 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => window.open(sub.imageUrl, '_blank')}
-                />
+                <div className="relative shrink-0">
+                  <img
+                    src={sub.imageUrls?.length ? sub.imageUrls[0] : sub.imageUrl}
+                    alt={sub.title}
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover border border-white/10 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => window.open(sub.imageUrls?.length ? sub.imageUrls[0] : sub.imageUrl, '_blank')}
+                  />
+                  {(sub.imageUrls?.length || 0) > 1 && (
+                    <span className="absolute -bottom-1.5 -right-1.5 px-1.5 py-0.5 rounded-full bg-[#D4A017] text-[#0F2557] text-[9px] font-bold">
+                      {sub.imageUrls!.length} images
+                    </span>
+                  )}
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -336,6 +406,24 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
                   </div>
                   {sub.description && (
                     <p className="text-[11px] text-white/60 mt-1 line-clamp-2">{sub.description}</p>
+                  )}
+                  {(sub.imageUrls?.length || 0) > 1 && (
+                    <div className="flex gap-1.5 mt-2 overflow-x-auto">
+                      {sub.imageUrls!.slice(0, 6).map((u, i) => (
+                        <img
+                          key={u}
+                          src={u}
+                          alt={`${sub.title} ${i + 1}`}
+                          className="w-12 h-12 rounded-lg object-cover border border-white/10 cursor-pointer hover:opacity-80 shrink-0"
+                          onClick={() => window.open(u, '_blank')}
+                        />
+                      ))}
+                      {sub.imageUrls!.length > 6 && (
+                        <span className="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[10px] text-white/50 shrink-0">
+                          +{sub.imageUrls!.length - 6}
+                        </span>
+                      )}
+                    </div>
                   )}
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     {sub.grade ? (

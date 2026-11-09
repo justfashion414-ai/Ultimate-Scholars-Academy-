@@ -135,6 +135,8 @@ export interface GraphicsSubmission {
   description?: string;
   /** Cloudinary secure_url of the uploaded design */
   imageUrl: string;
+  /** All images for multi-image assignments (imageUrl mirrors the first) */
+  imageUrls?: string[];
   createdAt: string;
   teacherComments?: TeacherComment[];
   grade?: string;
