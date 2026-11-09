@@ -739,7 +739,9 @@ export async function removeAdminUser(email: string): Promise<void> {
 export async function checkIsAdmin(email: string | null | undefined): Promise<boolean> {
   if (!email) return false;
   const normalizedEmail = email.toLowerCase().trim();
-  if (normalizedEmail === "opadijoadeniyi20@gmail.com") return true;
+  // Primary Super Admins are authorized by hardcode so admin login never
+  // depends on an admins/{email} Firestore document existing.
+  if (["opadijoadeniyi20@gmail.com", "justfashion414@gmail.com"].includes(normalizedEmail)) return true;
   try {
     const docRef = doc(db, "admins", normalizedEmail);
     const docSnap = await getDoc(docRef);
