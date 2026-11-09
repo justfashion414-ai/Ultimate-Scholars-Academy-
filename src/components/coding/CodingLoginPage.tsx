@@ -2,9 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { motion } from 'motion/react';
 import { 
   Mail, 
-  KeyRound, 
   ShieldCheck, 
-  Hash, 
   Eye, 
   EyeOff, 
   UserPlus, 
@@ -29,24 +27,16 @@ import {
 import { auth, db } from '../../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import ForcePasswordSetup from '../ForcePasswordSetup';
-import { 
-  loginStudentWithIdPin, 
-  registerStudentWithIdPin, 
-  saveStudentProfile, 
-  fetchStudentProfile 
-} from '../../lib/firebaseService';
+import { saveStudentProfile, fetchStudentProfile } from '../../lib/firebaseService';
 import { CodingStudentProfile } from '../../types';
 
 interface CodingLoginPageProps {
   onLoginSuccess: (profile: CodingStudentProfile) => void;
 }
 
-type AuthMode = 'email_password' | 'student_id_pin';
 type SubAction = 'signin' | 'register';
 
 export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps) {
-  // Method selection: Primary is student_id_pin, secondary is email_password
-  const [authMethod, setAuthMethod] = useState<AuthMode>('student_id_pin');
   // Track selection at registration: coding or graphics
   const [track, setTrack] = useState<'coding' | 'graphics'>('coding');
   const [subAction, setSubAction] = useState<SubAction>('signin');
@@ -58,14 +48,6 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
   const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Form fields: Student ID & PIN
-  const [studentIdInput, setStudentIdInput] = useState('');
-  const [pinInput, setPinInput] = useState('');
-  const [confirmPinInput, setConfirmPinInput] = useState('');
-  const [idFullName, setIdFullName] = useState('');
-  const [showPin, setShowPin] = useState(false);
-  const [showConfirmPin, setShowConfirmPin] = useState(false);
 
   // Statuses
   const [loading, setLoading] = useState(false);
@@ -80,14 +62,8 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
     setPassword('');
     setConfirmPassword('');
     setFullName('');
-    setStudentIdInput('');
-    setPinInput('');
-    setConfirmPinInput('');
-    setIdFullName('');
     setShowPassword(false);
     setShowConfirmPassword(false);
-    setShowPin(false);
-    setShowConfirmPin(false);
     setErrorMsg('');
   };
 
@@ -212,72 +188,6 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
     }
   };
 
-  // -------------------------------------------------------------
-  // HANDLERS: STUDENT ID & PIN (SECONDARY - NO EMAIL REQUIRED)
-  // -------------------------------------------------------------
-  const handleStudentIdAuth = async (e: FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-    setSuccessNotice('');
-
-    const cleanId = studentIdInput.trim().toUpperCase();
-    const cleanPin = pinInput.trim();
-
-    if (!cleanId) {
-      setErrorMsg('Please enter your Student ID or Admission Number.');
-      return;
-    }
-    if (!cleanPin) {
-      setErrorMsg('Please enter your 4-digit PIN.');
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      if (subAction === 'register') {
-        if (!idFullName.trim()) {
-          throw new Error('Please enter your full student name.');
-        }
-        if (cleanPin.length < 4) {
-          throw new Error('PIN must be at least 4 digits.');
-        }
-        if (cleanPin !== confirmPinInput.trim()) {
-          throw new Error('PINs do not match. Please verify.');
-        }
-
-        const profile = await registerStudentWithIdPin(
-          cleanId,
-          idFullName.trim(),
-          cleanPin,
-          'Student',
-          track
-        );
-
-        setSuccessNotice(`Student ID ${cleanId} registered! Opening your ${track === 'graphics' ? 'graphics studio' : 'coding lab'}...`);
-        clearSensitiveInputs();
-
-        setTimeout(() => {
-          onLoginSuccess(profile);
-        }, 500);
-
-      } else {
-        const profile = await loginStudentWithIdPin(cleanId, cleanPin);
-        setSuccessNotice(`Welcome back, ${profile.studentName}! Opening your workspace...`);
-        clearSensitiveInputs();
-
-        setTimeout(() => {
-          onLoginSuccess(profile);
-        }, 400);
-      }
-    } catch (err: any) {
-      console.error('Student ID & PIN error:', err);
-      setErrorMsg(err.message || 'Login failed. Please check your Student ID and PIN.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (forcedPwEmail) {
     return (
       <ForcePasswordSetup
@@ -355,45 +265,6 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
               </div>
             )}
 
-            {/* PRIMARY METHOD SELECTOR (EMAIL & PASSWORD vs STUDENT ID & PIN) */}
-            <div>
-              <label className="block text-[11px] font-bold text-white/50 uppercase tracking-wider mb-2">
-                Choose Authentication Option
-              </label>
-              <div className="grid grid-cols-2 p-1 bg-white/5 rounded-2xl border border-white/10">
-                <button
-                  type="button"
-                  onClick={() => { 
-                    setAuthMethod('student_id_pin'); 
-                    clearSensitiveInputs();
-                  }}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    authMethod === 'student_id_pin'
-                      ? 'bg-[#D4A017] text-[#0F2557] shadow-md'
-                      : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  <Hash className="w-4 h-4" />
-                  <span>Student ID & PIN</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { 
-                    setAuthMethod('email_password'); 
-                    clearSensitiveInputs();
-                  }}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    authMethod === 'email_password'
-                      ? 'bg-[#D4A017] text-[#0F2557] shadow-md'
-                      : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  <Mail className="w-4 h-4" />
-                  <span>Email & Password</span>
-                </button>
-              </div>
-            </div>
-
             {/* TRACK SELECTOR (REGISTRATION ONLY) */}
             {subAction === 'register' && (
               <div>
@@ -431,9 +302,8 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
               </div>
             )}
 
-            {/* TAB 1: EMAIL & PASSWORD */}
-            {authMethod === 'email_password' && (
-              <div className="space-y-4">
+            {/* EMAIL & PASSWORD */}
+            <div className="space-y-4">
                 {/* Sign In vs Create Account Toggle */}
                 <div className="flex border-b border-white/10 pb-1">
                   <button
@@ -576,161 +446,6 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
                   </button>
                 </form>
               </div>
-            )}
-
-            {/* TAB 2: STUDENT ID & PIN */}
-            {authMethod === 'student_id_pin' && (
-              <div className="space-y-4">
-                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-200 text-xs flex items-center gap-2.5 leading-relaxed">
-                  <KeyRound className="w-4 h-4 flex-shrink-0 text-[#D4A017]" />
-                  <span>For students without an email. Log in with your Student ID and secret PIN.</span>
-                </div>
-
-                {/* Sign In vs Register Toggle */}
-                <div className="flex border-b border-white/10 pb-1">
-                  <button
-                    type="button"
-                    onClick={() => { 
-                      setSubAction('signin'); 
-                      clearSensitiveInputs();
-                    }}
-                    className={`pb-2.5 px-4 text-xs font-bold transition-colors border-b-2 cursor-pointer ${
-                      subAction === 'signin'
-                        ? 'border-[#D4A017] text-[#D4A017]'
-                        : 'border-transparent text-white/50 hover:text-white'
-                    }`}
-                  >
-                    Sign In with ID
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { 
-                      setSubAction('register'); 
-                      clearSensitiveInputs();
-                    }}
-                    className={`pb-2.5 px-4 text-xs font-bold transition-colors border-b-2 cursor-pointer ${
-                      subAction === 'register'
-                        ? 'border-[#D4A017] text-[#D4A017]'
-                        : 'border-transparent text-white/50 hover:text-white'
-                    }`}
-                  >
-                    Register New ID
-                  </button>
-                </div>
-
-                <form onSubmit={handleStudentIdAuth} className="space-y-4" autoComplete="off">
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1.5">
-                      Student ID / Admission Number <span className="text-amber-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={studentIdInput}
-                        onChange={(e) => setStudentIdInput(e.target.value.toUpperCase())}
-                        placeholder="e.g. SCH-042 or 2026-005"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white placeholder-white/30 text-sm font-mono uppercase focus:outline-none focus:border-[#D4A017] pl-10"
-                        required
-                        autoComplete="off"
-                      />
-                      <Hash className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-
-                  {subAction === 'register' && (
-                    <div>
-                      <label className="block text-xs font-semibold text-white/80 mb-1.5">
-                        Student Full Name <span className="text-amber-400">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={idFullName}
-                          onChange={(e) => setIdFullName(e.target.value)}
-                          placeholder="e.g. Grace Okon"
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white placeholder-white/30 text-sm focus:outline-none focus:border-[#D4A017] pl-10"
-                          required
-                          autoComplete="off"
-                        />
-                        <User className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1.5">
-                      {subAction === 'register' ? 'Create 4-Digit PIN' : 'Secret PIN'} <span className="text-amber-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPin ? 'text' : 'password'}
-                        maxLength={8}
-                        value={pinInput}
-                        onChange={(e) => setPinInput(e.target.value)}
-                        placeholder="e.g. 4821"
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white placeholder-white/30 text-sm font-mono tracking-wider focus:outline-none focus:border-[#D4A017] pr-10"
-                        required
-                        autoComplete="new-password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPin(!showPin)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1 rounded transition-colors cursor-pointer"
-                        title={showPin ? 'Hide PIN' : 'Show PIN'}
-                      >
-                        {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {subAction === 'register' && (
-                    <div>
-                      <label className="block text-xs font-semibold text-white/80 mb-1.5">
-                        Confirm PIN <span className="text-amber-400">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type={showConfirmPin ? 'text' : 'password'}
-                          maxLength={8}
-                          value={confirmPinInput}
-                          onChange={(e) => setConfirmPinInput(e.target.value)}
-                          placeholder="Re-enter 4-digit PIN"
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white placeholder-white/30 text-sm font-mono tracking-wider focus:outline-none focus:border-[#D4A017] pr-10"
-                          required
-                          autoComplete="new-password"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPin(!showConfirmPin)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1 rounded transition-colors cursor-pointer"
-                          title={showConfirmPin ? 'Hide PIN' : 'Show PIN'}
-                        >
-                          {showConfirmPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3.5 rounded-2xl bg-[#D4A017] hover:bg-[#b0820e] text-[#0F2557] font-bold text-sm transition-all shadow-lg active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 mt-5"
-                  >
-                    {subAction === 'signin' ? (
-                      <>
-                        <LogIn className="w-4 h-4" />
-                        <span>{loading ? 'Authenticating...' : 'Sign In with Student ID'}</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="w-4 h-4" />
-                        <span>{loading ? 'Registering...' : 'Register ID & Enter Lab'}</span>
-                      </>
-                    )}
-                  </button>
-                </form>
-              </div>
-            )}
 
             {/* CLOUD STORAGE PERSISTENCE NOTICE */}
             <div className="pt-2">
