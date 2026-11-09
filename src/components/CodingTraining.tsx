@@ -22,7 +22,9 @@ import {
   AlertCircle,
   CloudCheck,
   CheckCircle2,
-  LogOut
+  LogOut,
+  Menu,
+  X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Editor from 'react-simple-code-editor';
@@ -52,6 +54,8 @@ const DEFAULT_FILES = {
   'script.js': ''
 };
 
+type MobilePane = 'code' | 'preview' | 'console';
+
 export default function CodingTraining() {
   const [files, setFiles] = useState(DEFAULT_FILES);
   const [activeFile, setActiveFile] = useState<keyof typeof DEFAULT_FILES>('index.html');
@@ -68,6 +72,10 @@ export default function CodingTraining() {
   const [isSavedProjectsModalOpen, setIsSavedProjectsModalOpen] = useState(false);
   const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  // Layout state: collapsible sidebar + mobile pane switching
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<MobilePane>('code');
 
   // Student Profile State
   const [currentStudent, setCurrentStudent] = useState<CodingStudentProfile | null>(() => {
@@ -320,6 +328,27 @@ export default function CodingTraining() {
     return Prism.highlight(code, Prism.languages[lang], lang);
   };
 
+  const saveStatusText = saveStatus === 'saving'
+    ? 'Saving to Cloud...'
+    : saveStatus === 'unsaved'
+      ? 'Unsaved edits'
+      : `Synced with Cloud ${lastSavedTime ? `@ ${lastSavedTime}` : ''}`;
+
+  const saveStatusColor = saveStatus === 'saving'
+    ? 'bg-amber-400 animate-pulse'
+    : saveStatus === 'unsaved'
+      ? 'bg-rose-400'
+      : 'bg-emerald-400';
+
+  // Mobile pane switch. Preview tab always runs the code first so the
+  // student immediately sees what their code produces.
+  const switchMobileView = (pane: MobilePane) => {
+    setMobileView(pane);
+    if (pane === 'preview' && !isLivePreview && hasExistingCode) {
+      runCode();
+    }
+  };
+
   // GATEKEEPER: Coding Login Page MUST appear first before getting into the coding interface
   if (!currentStudent) {
     return (
@@ -332,7 +361,7 @@ export default function CodingTraining() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050E22] text-white flex flex-col font-sans">
+    <div className="h-[100dvh] bg-[#050E22] text-white flex flex-col font-sans overflow-hidden">
       <style>{`
         .code-editor {
           font-family: 'Fira Code', 'Cascadia Code', 'Source Code Pro', monospace !important;
@@ -354,167 +383,88 @@ export default function CodingTraining() {
         .token.regex, .token.important, .token.variable { color: #d16969; }
       `}</style>
 
-      {/* TOP HEADER */}
-      <header className="h-16 border-b border-white/10 flex items-center justify-between px-4 sm:px-6 bg-[#0F2557] select-none">
-        <div className="flex items-center gap-3">
-          <Link to="/" className="p-2 hover:bg-white/10 rounded-full transition-all text-white/70 hover:text-white">
+      {/* TOP HEADER: single clean bar. Everything else lives in the sidebar. */}
+      <header className="h-14 shrink-0 border-b border-white/10 flex items-center justify-between px-2 sm:px-5 bg-[#0F2557] select-none z-30">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+          {/* Collapsible sidebar button */}
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="p-2 hover:bg-white/10 rounded-full transition-all text-white/70 hover:text-white cursor-pointer"
+            title="Open menu"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <Link to="/" className="p-2 hover:bg-white/10 rounded-full transition-all text-white/70 hover:text-white hidden sm:block" title="Back to album">
             <ChevronLeft className="w-5 h-5" />
           </Link>
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-[#D4A017] rounded-lg">
+
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-1.5 bg-[#D4A017] rounded-lg shrink-0">
               <Code2 className="w-5 h-5 text-[#0F2557]" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-sm font-bold tracking-tight">Coding Lab</h1>
-                <span className="text-[10px] bg-white/10 text-[#D4A017] px-2 py-0.5 rounded-full font-bold">
+                <h1 className="text-sm font-bold tracking-tight truncate">Coding Lab</h1>
+                <span className="hidden sm:inline text-[10px] bg-white/10 text-[#D4A017] px-2 py-0.5 rounded-full font-bold">
                   Class of 2026
                 </span>
               </div>
-              <p className="text-[10px] text-white/50 uppercase font-mono tracking-widest hidden sm:block">
-                Web Development Practice Studio
-              </p>
             </div>
+
+            {/* Compact cloud sync status */}
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${saveStatusColor}`}
+              title={saveStatusText}
+            />
           </div>
         </div>
 
-        {/* CONTROLS */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Templates Button */}
-          <button
-            onClick={() => setIsTemplatesModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-[#D4A017]/40 text-[#D4A017] font-bold text-xs transition-transform active:scale-95 cursor-pointer shadow-sm"
-          >
-            <LayoutTemplate className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Starter Templates</span>
-            <span className="sm:hidden">Templates</span>
-            <span className="px-1.5 py-0.2 bg-[#D4A017] text-[#0F2557] rounded-full text-[10px]">3</span>
-          </button>
-
-          {/* Teacher Progress Monitor Button */}
-          <button
-            onClick={() => setIsTeacherModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#071126] hover:bg-white/10 border border-white/15 text-white/90 font-semibold text-xs transition-colors cursor-pointer"
-            title="Inspect all student progress"
-          >
-            <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden md:inline">Teacher Monitor</span>
-          </button>
-
-          <div className="h-5 w-px bg-white/10 mx-1 hidden sm:block" />
-
-          {/* Live Preview Toggle */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-xl border border-white/10">
-            <span className={`text-[10px] font-bold uppercase tracking-widest hidden md:inline ${isLivePreview ? 'text-[#D4A017]' : 'text-white/30'}`}>
-              Live Preview
-            </span>
-            <button
-              onClick={() => setIsLivePreview(!isLivePreview)}
-              className={`relative w-8 h-4 rounded-full transition-colors cursor-pointer ${isLivePreview ? 'bg-[#D4A017]' : 'bg-white/10'}`}
-              title="Toggle Live Preview"
-            >
-              <div className={`absolute top-0.5 w-3 h-3 bg-[#0F2557] rounded-full transition-all ${isLivePreview ? 'left-4.5' : 'left-0.5'}`} />
-            </button>
-          </div>
-
-          {/* Reset Button */}
-          <button 
-            onClick={handleReset}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold transition-all cursor-pointer text-white/70 hover:text-white"
-            title="Clear editor back to empty"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Reset</span>
-          </button>
-
-          {/* Run Code Manual Button */}
-          <button 
-            onClick={runCode}
-            disabled={isLivePreview}
-            className={`flex items-center gap-1.5 px-4 sm:px-5 py-1.5 rounded-xl font-bold text-xs shadow-lg transition-all active:scale-95 ${
-              isLivePreview 
-                ? 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5' 
-                : 'bg-[#D4A017] hover:bg-[#b0820e] text-[#0F2557] cursor-pointer'
-            }`}
-          >
-            <Play className="w-3.5 h-3.5 fill-current" />
-            <span>Run</span>
-          </button>
-        </div>
+        {/* RUN: always visible, one tap away on every screen size */}
+        <button 
+          onClick={runCode}
+          className="flex items-center gap-1.5 px-4 sm:px-5 py-2 rounded-xl bg-[#D4A017] hover:bg-[#b0820e] text-[#0F2557] font-bold text-xs shadow-lg transition-all active:scale-95 cursor-pointer shrink-0"
+          title="Run your code now"
+        >
+          <Play className="w-3.5 h-3.5 fill-current" />
+          <span>Run</span>
+        </button>
       </header>
 
-      {/* STUDENT ACCOUNT & WORKSPACE BAR */}
-      <div className="bg-[#071126] border-b border-white/10 px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
-        {/* Left: Authenticated Student Identity & Status */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
-            <div className="w-6 h-6 rounded-full bg-[#D4A017] text-[#0F2557] flex items-center justify-center font-bold text-[11px] shadow-sm">
-              {currentStudent.studentName.charAt(0).toUpperCase()}
-            </div>
-            <div className="text-left">
-              <span className="text-[10px] text-white/40 block leading-tight">
-                {currentStudent.authMethod === 'student_id_pin' ? 'Student ID Login' : 'Email Login'}
+      {/* MOBILE PANE SWITCHER: Code / Preview / Console */}
+      <nav className="lg:hidden shrink-0 grid grid-cols-3 gap-1.5 p-1.5 bg-[#071126] border-b border-white/10">
+        {([
+          { id: 'code' as MobilePane, label: 'Code', icon: <FileCode className="w-3.5 h-3.5" /> },
+          { id: 'preview' as MobilePane, label: 'Preview', icon: <Laptop className="w-3.5 h-3.5" /> },
+          { id: 'console' as MobilePane, label: 'Console', icon: <Terminal className="w-3.5 h-3.5" /> },
+        ]).map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => switchMobileView(tab.id)}
+            className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              mobileView === tab.id
+                ? 'bg-[#D4A017] text-[#0F2557] shadow'
+                : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+            }`}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+            {tab.id === 'console' && output.length > 0 && (
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${mobileView === tab.id ? 'bg-[#0F2557] text-[#D4A017]' : 'bg-white/10 text-white/70'}`}>
+                {output.length}
               </span>
-              <span className="font-bold text-white leading-tight block">
-                {currentStudent.studentName}
-              </span>
-            </div>
-          </div>
-
-          <span className="hidden md:inline text-[10px] px-2.5 py-1 rounded-lg bg-white/10 text-white/80 font-mono border border-white/10">
-            {currentStudent.authMethod === 'student_id_pin' 
-              ? `ID: ${currentStudent.loginIdentifier || currentStudent.studentId.replace('student_', '').toUpperCase()}` 
-              : currentStudent.studentEmail}
-          </span>
-
-          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>
-              {saveStatus === 'saving' ? 'Saving to Cloud...' : saveStatus === 'unsaved' ? 'Unsaved edits' : `Synced with Cloud ${lastSavedTime ? `@ ${lastSavedTime}` : ''}`}
-            </span>
-          </div>
-        </div>
-
-        {/* Right: Project Save & Load Controls and Exit Session */}
-        <div className="flex items-center gap-2">
-          {/* My Saved Projects */}
-          <button
-            onClick={() => setIsSavedProjectsModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white font-medium transition-colors cursor-pointer text-xs"
-          >
-            <FolderOpen className="w-3.5 h-3.5 text-[#D4A017]" />
-            <span>My Projects</span>
+            )}
           </button>
-
-          {/* Quick Save */}
-          <button
-            onClick={() => setIsSavedProjectsModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#D4A017] hover:bg-[#b0820e] text-[#0F2557] font-bold transition-all cursor-pointer text-xs shadow-sm"
-          >
-            <Save className="w-3.5 h-3.5" />
-            <span>Save Work</span>
-          </button>
-
-          <div className="h-4 w-px bg-white/20 mx-1 hidden sm:block" />
-
-          {/* Exit / Sign Out Workspace */}
-          <button
-            onClick={() => setShowExitConfirm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 hover:text-rose-100 font-semibold transition-colors cursor-pointer text-xs"
-            title="Sign out and return to the student login page"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Exit Lab</span>
-          </button>
-        </div>
-      </div>
+        ))}
+      </nav>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <main className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
         {/* LEFT: CODE EDITOR */}
-        <div className="flex-1 flex flex-col border-r border-white/10 bg-[#050E22]">
+        <div className={`${mobileView === 'code' ? 'flex' : 'hidden'} lg:flex flex-1 min-h-0 min-w-0 flex-col border-b lg:border-b-0 lg:border-r border-white/10 bg-[#050E22]`}>
           {/* FILE TABS */}
-          <div className="flex items-center justify-between p-2 bg-[#0F2557]/50 border-b border-white/5 overflow-x-auto no-scrollbar">
+          <div className="shrink-0 flex items-center justify-between p-2 bg-[#0F2557]/50 border-b border-white/5 overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-1">
               {(['index.html', 'styles.css', 'script.js'] as const).map((fileName) => {
                 const charCount = files[fileName].length;
@@ -522,7 +472,7 @@ export default function CodingTraining() {
                   <button
                     key={fileName}
                     onClick={() => setActiveFile(fileName)}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
                       activeFile === fileName 
                         ? 'bg-white/10 text-[#D4A017] shadow-sm font-semibold' 
                         : 'text-white/40 hover:text-white/70 hover:bg-white/5'
@@ -540,19 +490,19 @@ export default function CodingTraining() {
               })}
             </div>
 
-            <div className="text-[10px] text-white/40 font-mono pr-2 hidden sm:block">
+            <div className="text-[10px] text-white/40 font-mono pr-2 hidden md:block">
               {files[activeFile].length} chars • {files[activeFile].split('\n').length} lines
             </div>
           </div>
 
           {/* EDITOR BODY */}
-          <div className="flex-1 relative font-mono text-sm overflow-auto scrollbar-thin scrollbar-thumb-white/10">
+          <div className="flex-1 min-h-0 relative font-mono text-sm overflow-auto scrollbar-thin scrollbar-thumb-white/10">
             <Editor
               value={files[activeFile]}
               onValueChange={handleCodeChange}
               highlight={highlight}
-              padding={20}
-              placeholder={`// ${activeFile} is empty. Write your ${activeFile.endsWith('.html') ? 'HTML markup' : activeFile.endsWith('.css') ? 'CSS styles' : 'JavaScript code'} here, or load a Starter Template...`}
+              padding={16}
+              placeholder={`// ${activeFile} is empty. Write your ${activeFile.endsWith('.html') ? 'HTML markup' : activeFile.endsWith('.css') ? 'CSS styles' : 'JavaScript code'} here, or open the menu for Starter Templates...`}
               className="code-editor min-h-full"
               style={{
                 fontFamily: '"Fira Code", "Cascadia Code", "Source Code Pro", monospace',
@@ -563,11 +513,11 @@ export default function CodingTraining() {
           </div>
         </div>
 
-        {/* RIGHT: PREVIEW & CONSOLE */}
-        <div className="flex-1 flex flex-col bg-[#050E22]">
-          {/* PREVIEW CONTAINER */}
-          <div className="flex-[2] flex flex-col border-b border-white/10 relative">
-            <div className="flex items-center justify-between px-4 py-2 bg-black/40 border-b border-white/5">
+        {/* RIGHT COLUMN: Preview + Console (stacked on desktop, tabbed on mobile) */}
+        <div className={`${mobileView === 'code' ? 'hidden' : 'flex'} lg:flex flex-1 min-h-0 min-w-0 flex-col`}>
+          {/* PREVIEW */}
+          <div className={`${mobileView === 'preview' ? 'flex' : 'hidden'} lg:flex flex-[2] min-h-0 flex-col border-b border-white/10 relative`}>
+            <div className="shrink-0 flex items-center justify-between px-4 py-2 bg-black/40 border-b border-white/5">
               <div className="flex items-center gap-2 text-white/50 font-bold text-[10px] uppercase tracking-wider">
                 <Laptop className="w-3.5 h-3.5 text-[#D4A017]" />
                 <span>Live Browser Preview</span>
@@ -577,7 +527,7 @@ export default function CodingTraining() {
               </div>
             </div>
 
-            <div className="flex-1 bg-white relative">
+            <div className="flex-1 min-h-0 bg-white relative">
               {previewUrl ? (
                 <iframe
                   ref={iframeRef}
@@ -588,8 +538,8 @@ export default function CodingTraining() {
                 />
               ) : (
                 /* EMPTY STATE IN PREVIEW WHEN EDITOR IS EMPTY */
-                <div className="absolute inset-0 flex items-center justify-center p-6 bg-[#0a1532] text-center">
-                  <div className="max-w-md space-y-4">
+                <div className="absolute inset-0 flex items-center justify-center p-6 bg-[#0a1532] text-center overflow-y-auto">
+                  <div className="max-w-md space-y-4 py-4">
                     <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-[#D4A017]">
                       <FileCode className="w-8 h-8 opacity-80" />
                     </div>
@@ -649,8 +599,8 @@ export default function CodingTraining() {
           </div>
 
           {/* CONSOLE OUTPUT */}
-          <div className="flex-1 flex flex-col bg-black/40">
-            <div className="flex items-center justify-between px-4 py-2 bg-black/40 border-b border-white/5">
+          <div className={`${mobileView === 'console' ? 'flex' : 'hidden'} lg:flex flex-1 min-h-0 flex-col bg-black/40`}>
+            <div className="shrink-0 flex items-center justify-between px-4 py-2 bg-black/40 border-b border-white/5">
               <div className="flex items-center gap-2 text-white/50 font-bold text-[10px] uppercase tracking-wider">
                 <Terminal className="w-3.5 h-3.5" />
                 <span>Console Logs</span>
@@ -662,7 +612,7 @@ export default function CodingTraining() {
                 Clear
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-1.5 scrollbar-thin scrollbar-thumb-white/10">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 font-mono text-xs space-y-1.5 scrollbar-thin scrollbar-thumb-white/10">
               {output.length === 0 ? (
                 <div className="text-white/20 italic">
                   No output yet. Write console.log() in script.js or interact with buttons to view messages.
@@ -679,27 +629,163 @@ export default function CodingTraining() {
         </div>
       </main>
 
-      {/* FOOTER */}
-      <footer className="h-11 border-t border-white/10 bg-[#0F2557] flex items-center px-4 sm:px-6 text-[10px] text-white/50 gap-6">
-        <div className="flex items-center gap-1.5">
-          <BookOpen className="w-3.5 h-3.5 text-[#D4A017]" />
-          <span className="uppercase tracking-widest font-bold text-white/70">Docs:</span>
-        </div>
-        <div className="flex gap-4 font-medium">
-          <a href="https://developer.mozilla.org/en-US/docs/Web/HTML" target="_blank" rel="noreferrer" className="hover:text-[#D4A017] transition-all flex items-center gap-1">
-            HTML Docs <ExternalLink className="w-2.5 h-2.5" />
-          </a>
-          <a href="https://developer.mozilla.org/en-US/docs/Web/CSS" target="_blank" rel="noreferrer" className="hover:text-[#D4A017] transition-all flex items-center gap-1">
-            CSS Docs <ExternalLink className="w-2.5 h-2.5" />
-          </a>
-          <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" rel="noreferrer" className="hover:text-[#D4A017] transition-all flex items-center gap-1">
-            JavaScript Docs <ExternalLink className="w-2.5 h-2.5" />
-          </a>
-        </div>
-        <div className="ml-auto hidden sm:flex items-center gap-2 italic">
-          Ultimate Scholars Academy • Student Web Coding Studio
-        </div>
-      </footer>
+      {/* COLLAPSIBLE SIDEBAR (MENU DRAWER) */}
+      <AnimatePresence>
+        {isDrawerOpen && (
+          <div className="fixed inset-0 z-50 flex">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={() => setIsDrawerOpen(false)}
+            />
+            <motion.aside
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'tween', duration: 0.22 }}
+              className="relative w-72 max-w-[85vw] h-full bg-[#0F2557] border-r border-white/10 flex flex-col shadow-2xl"
+            >
+              {/* Sidebar header */}
+              <div className="h-14 shrink-0 px-4 flex items-center justify-between border-b border-white/10">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-1.5 bg-[#D4A017] rounded-lg shrink-0">
+                    <Code2 className="w-4 h-4 text-[#0F2557]" />
+                  </div>
+                  <span className="text-sm font-bold truncate">Coding Lab Menu</span>
+                </div>
+                <button
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="p-2 hover:bg-white/10 rounded-full transition-all text-white/70 hover:text-white cursor-pointer"
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Scrollable sidebar body */}
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-5 scrollbar-thin scrollbar-thumb-white/10">
+                {/* Student identity + cloud sync */}
+                <div className="rounded-xl bg-white/5 border border-white/10 p-3.5 space-y-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-full bg-[#D4A017] text-[#0F2557] flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                      {currentStudent.studentName.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-white/40 block leading-tight">
+                        {currentStudent.authMethod === 'student_id_pin' ? 'Student ID Login' : 'Email Login'}
+                      </span>
+                      <span className="font-bold text-white leading-tight block truncate">
+                        {currentStudent.studentName}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="block text-[10px] px-2.5 py-1 rounded-lg bg-white/10 text-white/80 font-mono border border-white/10 truncate">
+                    {currentStudent.authMethod === 'student_id_pin'
+                      ? `ID: ${currentStudent.loginIdentifier || currentStudent.studentId.replace('student_', '').toUpperCase()}`
+                      : currentStudent.studentEmail}
+                  </span>
+                  <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{saveStatusText}</span>
+                  </div>
+                </div>
+
+                {/* Workspace actions */}
+                <div className="space-y-2">
+                  <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold px-1">Workspace</p>
+                  <button
+                    onClick={() => { setIsDrawerOpen(false); setIsTemplatesModalOpen(true); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-[#D4A017]/40 text-[#D4A017] font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    <LayoutTemplate className="w-4 h-4" />
+                    <span>Starter Templates</span>
+                    <span className="ml-auto px-1.5 py-0.5 bg-[#D4A017] text-[#0F2557] rounded-full text-[10px]">3</span>
+                  </button>
+                  <button
+                    onClick={() => { setIsDrawerOpen(false); setIsSavedProjectsModalOpen(true); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium text-xs transition-colors cursor-pointer"
+                  >
+                    <FolderOpen className="w-4 h-4 text-[#D4A017]" />
+                    <span>My Projects</span>
+                  </button>
+                  <button
+                    onClick={() => { setIsDrawerOpen(false); setIsSavedProjectsModalOpen(true); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#D4A017] hover:bg-[#b0820e] text-[#0F2557] font-bold text-xs transition-colors cursor-pointer shadow-sm"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Save Work</span>
+                  </button>
+                  <button
+                    onClick={() => { setIsDrawerOpen(false); setIsTeacherModalOpen(true); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium text-xs transition-colors cursor-pointer"
+                  >
+                    <GraduationCap className="w-4 h-4 text-emerald-400" />
+                    <span>Teacher Monitor</span>
+                  </button>
+                </div>
+
+                {/* Editor settings */}
+                <div className="space-y-2">
+                  <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold px-1">Editor Settings</p>
+                  <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10">
+                    <span className="text-xs font-medium text-white/90">Live Preview</span>
+                    <button
+                      onClick={() => setIsLivePreview(!isLivePreview)}
+                      className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer shrink-0 ${isLivePreview ? 'bg-[#D4A017]' : 'bg-white/10'}`}
+                      title="Toggle Live Preview"
+                    >
+                      <div className={`absolute top-0.5 w-4 h-4 bg-[#0F2557] rounded-full transition-all ${isLivePreview ? 'left-[18px]' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => { setIsDrawerOpen(false); handleReset(); }}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Reset Editor</span>
+                  </button>
+                </div>
+
+                {/* Docs */}
+                <div className="space-y-2">
+                  <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold px-1 flex items-center gap-1.5">
+                    <BookOpen className="w-3 h-3 text-[#D4A017]" />
+                    Docs
+                  </p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <a href="https://developer.mozilla.org/en-US/docs/Web/HTML" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/70 hover:text-[#D4A017] transition-colors">
+                      HTML <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                    <a href="https://developer.mozilla.org/en-US/docs/Web/CSS" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/70 hover:text-[#D4A017] transition-colors">
+                      CSS <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/70 hover:text-[#D4A017] transition-colors">
+                      JS <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sidebar footer */}
+              <div className="shrink-0 p-4 border-t border-white/10 space-y-2.5">
+                <button
+                  onClick={() => setShowExitConfirm(true)}
+                  className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 hover:text-rose-100 font-semibold transition-colors cursor-pointer text-xs"
+                  title="Sign out and return to the student login page"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Exit Lab</span>
+                </button>
+                <p className="text-[10px] text-white/30 text-center italic">
+                  Ultimate Scholars Academy • Student Web Coding Studio
+                </p>
+              </div>
+            </motion.aside>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* MODALS */}
       <CodingTemplatesModal
