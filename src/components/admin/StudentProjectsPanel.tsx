@@ -46,7 +46,7 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
   const [live, setLive] = useState(false);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [mobileStudent, setMobileStudent] = useState('all');
+  const [mobileStudentId, setMobileStudentId] = useState<string | null>(null);
 
   const [openProjectId, setOpenProjectId] = useState<string | null>(null);
   const [editFiles, setEditFiles] = useState<CodingProject['files']>({ 'index.html': '', 'styles.css': '', 'script.js': '' });
@@ -264,12 +264,10 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
   }, [studentMap, searchQuery]);
 
   const visibleProjects = useMemo(() => {
-    let list = projects;
-    if (mobileStudent !== 'all') list = list.filter((p) => p.studentId === mobileStudent);
     const q = searchQuery.trim().toLowerCase();
-    if (q) list = list.filter((p) => `${p.title} ${p.studentName || ''}`.toLowerCase().includes(q));
-    return list;
-  }, [projects, mobileStudent, searchQuery]);
+    if (!q) return projects;
+    return projects.filter((p) => `${p.title} ${p.studentName || ''}`.toLowerCase().includes(q));
+  }, [projects, searchQuery]);
 
   const markedCount = projects.filter((p) => p.grade && p.grade !== '').length;
   const starredCount = projects.filter((p) => p.starred).length;
@@ -449,41 +447,49 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
             {loadingStudents && <p className="text-xs text-white/40 px-2 py-2">Loading students...</p>}
             {!loadingStudents && filteredStudents.length === 0 && <p className="text-xs text-white/40 px-2 py-2">No students found.</p>}
             {filteredStudents.map((s) => (
-              <div key={s.studentId} className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/5">
+              <button key={s.studentId} onClick={() => setMobileStudentId(s.studentId)} className="w-full text-left flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/5 hover:border-[#D4A017]/40 cursor-pointer">
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-semibold truncate">{s.studentName}</div>
                   <div className="text-[10px] text-white/40">{s.projects.length} project{s.projects.length === 1 ? '' : 's'} · {timeAgo(s.latest)}</div>
                 </div>
                 {s.projects.some((p) => p.grade) && <Award className="w-3.5 h-3.5 text-emerald-400 shrink-0" title="Has marked work" />}
                 {s.projects.some((p) => p.starred) && <Star className="w-3.5 h-3.5 text-[#D4A017] fill-[#D4A017] shrink-0" />}
-              </div>
+              </button>
             ))}
           </div>
         </div>
 
-        {/* PROJECT LIST (mobile: the only list, filtered by the picker above) */}
-        <div className="flex-1 min-w-0 space-y-2 order-1 md:order-2">
-          <div className="md:hidden space-y-2">
-            <select
-              value={mobileStudent}
-              onChange={(e) => setMobileStudent(e.target.value)}
-              className="w-full px-3 py-3 rounded-xl bg-black/40 border border-white/10 text-xs font-semibold focus:outline-none focus:border-[#D4A017]/60 cursor-pointer"
-            >
-              <option value="all">All students ({projects.length} projects)</option>
-              {studentMap.map((s) => (
-                <option key={s.studentId} value={s.studentId}>{s.studentName} ({s.projects.length})</option>
-              ))}
-            </select>
-            <div className="relative">
-              <Search className="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search projects by title or student..."
-                className="w-full pl-9 pr-3 py-3 rounded-xl bg-black/40 border border-white/10 text-xs focus:outline-none focus:border-[#D4A017]/60"
-              />
-            </div>
+        {/* MOBILE: tap a student's name to open their projects in a popup */}
+        <div className="md:hidden space-y-2">
+          <div className="relative">
+            <Search className="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search students..."
+              className="w-full pl-9 pr-3 py-3 rounded-xl bg-black/40 border border-white/10 text-xs focus:outline-none focus:border-[#D4A017]/60"
+            />
           </div>
+          {loadingStudents && <p className="text-xs text-white/40 px-2 py-2">Loading students...</p>}
+          {!loadingStudents && filteredStudents.length === 0 && <p className="text-xs text-white/40 px-2 py-2">No students found.</p>}
+          {filteredStudents.map((s) => (
+            <button
+              key={s.studentId}
+              onClick={() => setMobileStudentId(s.studentId)}
+              className="w-full text-left flex items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-[#D4A017]/40 cursor-pointer"
+            >
+              <div className="p-2 rounded-lg bg-white/5 text-[#D4A017]"><User className="w-4 h-4" /></div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold truncate">{s.studentName}</div>
+                <div className="text-[11px] text-white/40">{s.projects.length} project{s.projects.length === 1 ? '' : 's'} · {timeAgo(s.latest)}</div>
+              </div>
+              <span className="text-[10px] font-bold text-[#D4A017] shrink-0">View</span>
+            </button>
+          ))}
+        </div>
+
+        {/* PROJECT LIST (desktop) */}
+        <div className="hidden md:block flex-1 min-w-0 space-y-2">
           {visibleProjects.length === 0 && (
             <div className="p-8 text-center rounded-2xl bg-white/[0.03] border border-white/10">
               <Sparkles className="w-6 h-6 text-white/30 mx-auto mb-2" />
@@ -529,6 +535,49 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
           ))}
         </div>
       </div>
+
+      {/* POPUP: one student's projects */}
+      {mobileStudentId && (() => {
+        const stu = studentMap.find((s) => s.studentId === mobileStudentId);
+        if (!stu) return null;
+        return (
+          <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/80" onClick={() => setMobileStudentId(null)}>
+            <div
+              className="w-full sm:max-w-lg bg-[#0b1739] border border-white/15 rounded-t-3xl sm:rounded-2xl max-h-[85vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/10 bg-[#0F2557] shrink-0">
+                <div className="min-w-0">
+                  <h4 className="font-bold text-sm truncate">{stu.studentName}</h4>
+                  <p className="text-[10px] text-white/50">{stu.projects.length} saved project{stu.projects.length === 1 ? '' : 's'}</p>
+                </div>
+                <button onClick={() => setMobileStudentId(null)} className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 cursor-pointer" title="Close">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="overflow-y-auto p-3 space-y-2">
+                {stu.projects.length === 0 && <p className="text-xs text-white/40 text-center py-6">No projects saved yet.</p>}
+                {stu.projects.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => { setMobileStudentId(null); openDetail(p); }}
+                    className="w-full text-left p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 hover:border-[#D4A017]/40 cursor-pointer flex items-center gap-3"
+                  >
+                    <Eye className="w-4 h-4 text-[#D4A017] shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-bold truncate">{p.title}</div>
+                      <div className="text-[10px] text-white/40">updated {timeAgo(p.updatedAt)}</div>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${p.grade ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40' : 'bg-white/5 text-white/40 border-white/10'}`}>
+                      {p.grade ? `${p.grade}/100` : 'Unmarked'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {toast && (
         <div className="fixed bottom-6 right-6 z-[60] flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-semibold">
