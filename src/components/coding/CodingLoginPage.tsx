@@ -25,7 +25,9 @@ import {
   createUserWithEmailAndPassword, 
   updateProfile 
 } from 'firebase/auth';
-import { auth } from '../../lib/firebase';
+import { auth, db } from '../../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import ForcePasswordSetup from '../ForcePasswordSetup';
 import { 
   loginStudentWithIdPin, 
   registerStudentWithIdPin, 
@@ -66,6 +68,8 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
+  // SECURITY GATE: set when an administrator signs in with a temporary password
+  const [forcedPwEmail, setForcedPwEmail] = useState<string | null>(null);
 
   // Helper to completely clear sensitive input fields so subsequent students on shared lab computers cannot view them
   const clearSensitiveInputs = () => {
@@ -82,6 +86,35 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
     setShowPin(false);
     setShowConfirmPin(false);
     setErrorMsg('');
+  };
+
+  // Shared continuation after a successful email sign-in
+  const continueEmailSignIn = async (cleanEmail: string) => {
+    const user = auth.currentUser;
+    if (!user) {
+      setErrorMsg('Your session expired. Please sign in again.');
+      return;
+    }
+    let profile: CodingStudentProfile | null = await fetchStudentProfile(user.uid);
+    if (!profile) {
+      profile = {
+        studentId: user.uid,
+        studentName: user.displayName || cleanEmail.split('@')[0],
+        studentEmail: cleanEmail,
+        className: 'Student',
+        authMethod: 'email_password',
+        loginIdentifier: cleanEmail,
+        lastActive: new Date().toISOString()
+      };
+      await saveStudentProfile(profile);
+    }
+
+    setSuccessNotice(`Welcome back, ${profile.studentName}! Entering coding workspace...`);
+    clearSensitiveInputs();
+
+    setTimeout(() => {
+      if (profile) onLoginSuccess(profile);
+    }, 400);
   };
 
   // -------------------------------------------------------------
@@ -144,29 +177,18 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
         }, 500);
 
       } else {
-        const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, cleanPass);
-        const user = userCredential.user;
+        await signInWithEmailAndPassword(auth, cleanEmail, cleanPass);
 
-        let profile = await fetchStudentProfile(user.uid);
-        if (!profile) {
-          profile = {
-            studentId: user.uid,
-            studentName: user.displayName || cleanEmail.split('@')[0],
-            studentEmail: cleanEmail,
-            className: 'Student',
-            authMethod: 'email_password',
-            loginIdentifier: cleanEmail,
-            lastActive: new Date().toISOString()
-          };
-          await saveStudentProfile(profile);
+        // SECURITY GATE: administrators flagged for a mandatory password change
+        // must set a permanent password before entering any interface.
+        const adminSnap = await getDoc(doc(db, 'admins', cleanEmail));
+        if (adminSnap.exists() && (adminSnap.data() as any).mustSetPassword === true) {
+          clearSensitiveInputs();
+          setForcedPwEmail(cleanEmail);
+          return;
         }
 
-        setSuccessNotice(`Welcome back, ${profile.studentName}! Entering coding workspace...`);
-        clearSensitiveInputs();
-
-        setTimeout(() => {
-          if (profile) onLoginSuccess(profile);
-        }, 400);
+        await continueEmailSignIn(cleanEmail);
       }
     } catch (err: any) {
       console.error('Email authentication error:', err);
@@ -250,6 +272,19 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
       setLoading(false);
     }
   };
+
+  if (forcedPwEmail) {
+    return (
+      <ForcePasswordSetup
+        email={forcedPwEmail}
+        onDone={async () => {
+          const pendingEmail = forcedPwEmail;
+          setForcedPwEmail(null);
+          if (pendingEmail) await continueEmailSignIn(pendingEmail);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#050E22] text-white flex flex-col font-sans selection:bg-[#D4A017] selection:text-[#0F2557] relative">
