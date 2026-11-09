@@ -541,9 +541,9 @@ export default function StudentProjectsPanel({ onDataChange }: { onDataChange: (
         const stu = studentMap.find((s) => s.studentId === mobileStudentId);
         if (!stu) return null;
         return (
-          <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/80" onClick={() => setMobileStudentId(null)}>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80" onClick={() => setMobileStudentId(null)}>
             <div
-              className="w-full sm:max-w-lg bg-[#0b1739] border border-white/15 rounded-t-3xl sm:rounded-2xl max-h-[85vh] flex flex-col"
+              className="w-full max-w-lg bg-[#0b1739] border border-white/15 rounded-2xl max-h-[85vh] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/10 bg-[#0F2557] shrink-0">
