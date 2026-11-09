@@ -1110,7 +1110,8 @@ export async function registerStudentWithIdPin(
   rawStudentId: string, 
   name: string, 
   pin: string, 
-  className?: string
+  className?: string,
+  track: 'coding' | 'graphics' = 'coding'
 ): Promise<CodingStudentProfile> {
   const trimmedId = rawStudentId.trim();
   const trimmedPin = pin.trim();
@@ -1154,6 +1155,7 @@ export async function registerStudentWithIdPin(
     authMethod: 'student_id_pin',
     loginIdentifier: trimmedId.toUpperCase(),
     pin: trimmedPin,
+    track,
     lastActive: new Date().toISOString()
   };
 
@@ -1215,8 +1217,9 @@ export async function loginStudentWithIdPin(rawStudentId: string, pin: string): 
     throw new Error("Incorrect PIN. Please re-enter your 4-digit PIN or ask your teacher for help.");
   }
 
-  // Update last active
+  // Update last active; lazy-migrate legacy students to the coding track
   profile.lastActive = new Date().toISOString();
+  if (!profile.track) profile.track = 'coding';
   await saveStudentProfile(profile);
 
   return profile;

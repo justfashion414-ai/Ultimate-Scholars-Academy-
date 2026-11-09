@@ -120,6 +120,24 @@ export interface CodingStudentProfile {
   loginIdentifier?: string;
   pin?: string;
   lastActive: string;
+  /** Which class track this student belongs to. Missing = 'coding' (legacy students). */
+  track?: 'coding' | 'graphics';
+  /** Cloudinary URL of the student's profile picture. */
+  photoUrl?: string;
+}
+
+export interface GraphicsSubmission {
+  id: string;
+  studentId: string;
+  studentName: string;
+  /** Assignment title, e.g. "Logo Design - Week 3" */
+  title: string;
+  description?: string;
+  /** Cloudinary secure_url of the uploaded design */
+  imageUrl: string;
+  createdAt: string;
+  teacherComments?: TeacherComment[];
+  grade?: string;
 }
 
 

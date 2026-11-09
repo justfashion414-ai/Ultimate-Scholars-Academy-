@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Shield, Trash2, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { Shield, Trash2, ArrowLeft } from 'lucide-react';
 import AdminLayout from './admin/AdminLayout';
 import { fetchPendingSubmissions } from '../lib/firebaseService';
 import { auth, db } from '../lib/firebase';
@@ -14,14 +14,14 @@ interface AdminPortalProps {
   setCleanUpMode?: (val: boolean) => void;
 }
 
+/** The admin control panel as a NORMAL PAGE at /admin (no floating button, no overlay). */
 export default function AdminPortal({
   onDataChange,
   refreshKey = 0,
   cleanUpMode = false,
   setCleanUpMode = () => {}
 }: AdminPortalProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [showFloatingButton, setShowFloatingButton] = useState(false);
+  const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('scholars_admin_session') === 'true';
   });
@@ -30,27 +30,25 @@ export default function AdminPortal({
   // SECURITY GATE: set when the signed-in admin still has a mandatory password change
   const [forcedPw, setForcedPw] = useState(false);
 
-  // Listen for 3-click logo trigger
-  useEffect(() => {
-    const handleTriggerAdmin = () => {
-      setShowFloatingButton(true);
-      setIsOpen(true);
-    };
-    window.addEventListener('trigger-admin-portal', handleTriggerAdmin);
-    return () => window.removeEventListener('trigger-admin-portal', handleTriggerAdmin);
-  }, []);
-
-  // Sync Firebase authentication state
+  // Sync Firebase authentication state + local session flag
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setCurrentUser(user);
     });
-    return () => unsubscribe();
+    const checkAuth = () => {
+      setIsAuthenticated(localStorage.getItem('scholars_admin_session') === 'true');
+    };
+    checkAuth();
+    window.addEventListener('storage', checkAuth);
+    return () => {
+      unsubscribe();
+      window.removeEventListener('storage', checkAuth);
+    };
   }, []);
 
-  // SECURITY GATE: when the portal opens, a flagged admin must set a permanent password first
+  // SECURITY GATE: a flagged admin must set a permanent password before entering
   useEffect(() => {
-    if (!isOpen || !currentUser?.email) {
+    if (!currentUser?.email) {
       setForcedPw(false);
       return;
     }
@@ -64,20 +62,9 @@ export default function AdminPortal({
       }
     })();
     return () => { cancelled = true; };
-  }, [isOpen, currentUser]);
+  }, [currentUser]);
 
-  // Read current authentication status regularly
-  useEffect(() => {
-    const checkAuth = () => {
-      setIsAuthenticated(localStorage.getItem('scholars_admin_session') === 'true');
-    };
-    checkAuth();
-    // Add event listener to capture login state changes across the app
-    window.addEventListener('storage', checkAuth);
-    return () => window.removeEventListener('storage', checkAuth);
-  }, [isOpen]);
-
-  // Read pending submissions for floating badge
+  // Pending submissions badge
   useEffect(() => {
     const updatePendingCount = async () => {
       if (!isAuthenticated || !currentUser) {
@@ -88,144 +75,90 @@ export default function AdminPortal({
         const pending = await fetchPendingSubmissions();
         setPendingCount(pending.length);
       } catch (err) {
-        console.error("Error reading pending submissions in AdminPortal:", err);
+        console.error('Error reading pending submissions in AdminPortal:', err);
       }
     };
-    
+
     updatePendingCount();
-    const interval = setInterval(updatePendingCount, 15000); // Check every 15s
+    const interval = setInterval(updatePendingCount, 15000);
     return () => clearInterval(interval);
-  }, [refreshKey, isOpen, isAuthenticated, currentUser]);
+  }, [refreshKey, isAuthenticated, currentUser]);
 
   return (
-    <>
-      {/* FLOATING ACTION GATEKEEPER BADGE/TRIGGER (Only shown after clicking school logo 3 times) */}
-      {showFloatingButton && (
-        <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-1.5">
-          {isAuthenticated && !cleanUpMode && (
-            <div className="bg-emerald-950/90 backdrop-blur text-emerald-300 border border-emerald-500/30 text-[9px] font-mono px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 font-bold uppercase tracking-wider">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-              </span>
-              <span>Admin Active</span>
-            </div>
-          )}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setIsOpen(true)}
-            className={`flex items-center gap-2 font-semibold text-xs px-4 py-3 rounded-full shadow-2xl border cursor-pointer relative font-mono tracking-wider transition-all ${
-              cleanUpMode
-                ? 'bg-rose-600 text-white border-rose-400 animate-pulse shadow-rose-600/50'
-                : 'bg-[#0F2557] hover:bg-[#15347a] text-[#D4A017] border-[#D4A017]/30 shadow-[#D4A017]/25'
-            }`}
-            id="btn-trigger-admin-portal"
-          >
-            {cleanUpMode ? (
-              <Trash2 className="w-4 h-4 text-white animate-bounce" />
-            ) : (
-              <Shield className="w-4 h-4" />
-            )}
-            <span>{cleanUpMode ? 'Admin Clean Up' : 'Admin Control Panel'}</span>
-            {!cleanUpMode && pendingCount > 0 && (
-              <span className="absolute -top-2 -right-1 bg-red-500 text-white font-sans text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold animate-pulse shadow-md border border-white">
-                {pendingCount}
-              </span>
-            )}
-          </motion.button>
-        </div>
-      )}
-
-      <AnimatePresence>
-        {isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 overflow-y-auto py-10">
-            {/* OVERLAY BACKDROP */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-[#050E22]/95 backdrop-blur-md"
-              onClick={() => setIsOpen(false)}
-            />
-
-            {/* MODAL PORTAL CONTAINER */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 30 }}
-              className="relative bg-[#0F2557] rounded-3xl overflow-hidden shadow-2xl max-w-7xl md:w-[95vw] w-full z-10 border border-[#D4A017]/30 flex flex-col h-[90vh] max-h-[90vh] text-white scrollbar-thin scrollbar-thumb-white/10 [WebkitOverflowScrolling:touch]"
-            >
-              {/* HEADER */}
-              <div className="p-6 md:p-8 bg-[#050E22]/80 border-b border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#D4A017]/15 border border-[#D4A017]/40 flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-[#D4A017]" />
-                  </div>
-                  <div className="text-left">
-                    <h2 className="text-xl md:text-2xl font-serif font-bold text-[#D4A017] flex items-center gap-2">
-                      {isAuthenticated ? "Administrative Control Panel" : "Gatekeeper Authorization"}
-                    </h2>
-                    <p className="text-white/50 text-[10px] uppercase font-mono tracking-wider">
-                      Database Editor & Year-Book Custodian
-                    </p>
-                  </div>
-                </div>
-
-                {isAuthenticated && (
-                  <button
-                    onClick={() => {
-                      setCleanUpMode(!cleanUpMode);
-                      if (!cleanUpMode) {
-                        setIsOpen(false);
-                      }
-                    }}
-                    className={`px-4 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-2 cursor-pointer border transition-all shadow-lg animate-pulse ${
-                      cleanUpMode
-                        ? 'bg-rose-600 text-white border-rose-400 hover:bg-rose-700 shadow-rose-600/40'
-                        : 'bg-rose-500/25 text-rose-200 border-rose-500/45 hover:bg-rose-500/35 shadow-rose-950/50'
-                    }`}
-                    title={cleanUpMode ? "Turn Off Clean Up Mode" : "Turn On Clean Up Mode"}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>{cleanUpMode ? "Clean Up: ACTIVE" : "Clean Up Mode"}</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="w-8 h-8 rounded-full bg-white/5 text-white/70 flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer self-end md:self-auto"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* RENDER THE LAYOUT AND ALL ITS TABS */}
-              <div className="flex-grow min-h-0 flex flex-col overflow-hidden">
-                {forcedPw && currentUser?.email ? (
-                  <ForcePasswordSetup
-                    email={currentUser.email.toLowerCase()}
-                    embedded
-                    onDone={() => setForcedPw(false)}
-                  />
-                ) : (
-                <AdminLayout 
-                  onDataChange={() => {
-                    // Refresh status in parent components
-                    onDataChange();
-                    setIsAuthenticated(localStorage.getItem('scholars_admin_session') === 'true');
-                  }}
-                  refreshKey={refreshKey}
-                  cleanUpMode={cleanUpMode}
-                  setCleanUpMode={setCleanUpMode}
-                  onClose={() => setIsOpen(false)}
-                />
-                )}
-              </div>
-            </motion.div>
+    <div className="min-h-[100dvh] bg-[#050E22] text-white flex flex-col font-sans selection:bg-[#D4A017] selection:text-[#0F2557]">
+      {/* PAGE HEADER */}
+      <header className="border-b border-white/10 bg-[#071126] px-4 sm:px-6 py-3 flex items-center justify-between gap-3 sticky top-0 z-30">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-[#D4A017]/15 border border-[#D4A017]/40 flex items-center justify-center shrink-0">
+            <Shield className="w-5 h-5 text-[#D4A017]" />
           </div>
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-xl font-serif font-bold text-[#D4A017] truncate">
+              {isAuthenticated ? 'Administrative Control Panel' : 'Gatekeeper Authorization'}
+            </h1>
+            <p className="text-white/50 text-[9px] uppercase font-mono tracking-wider">
+              Database Editor & Year-Book Custodian
+            </p>
+          </div>
+          {isAuthenticated && (
+            <span className="hidden md:flex items-center gap-1.5 bg-emerald-950/90 text-emerald-300 border border-emerald-500/30 text-[9px] font-mono px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+              </span>
+              Admin Active
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {isAuthenticated && (
+            <button
+              onClick={() => setCleanUpMode(!cleanUpMode)}
+              className={`hidden sm:flex px-3 py-2 rounded-xl text-[11px] font-mono font-bold items-center gap-1.5 cursor-pointer border transition-all ${
+                cleanUpMode
+                  ? 'bg-rose-600 text-white border-rose-400 animate-pulse'
+                  : 'bg-rose-500/25 text-rose-200 border-rose-500/45 hover:bg-rose-500/35'
+              }`}
+              title={cleanUpMode ? 'Turn Off Clean Up Mode' : 'Turn On Clean Up Mode'}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{cleanUpMode ? 'Clean Up: ACTIVE' : 'Clean Up Mode'}</span>
+            </button>
+          )}
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white text-xs font-semibold transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Back to Site</span>
+          </button>
+        </div>
+      </header>
+
+      {/* FULL-PAGE CONSOLE */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        {forcedPw && currentUser?.email ? (
+          <div className="flex-1 flex items-center justify-center p-6">
+            <ForcePasswordSetup
+              email={currentUser.email.toLowerCase()}
+              embedded
+              onDone={() => setForcedPw(false)}
+            />
+          </div>
+        ) : (
+          <AdminLayout
+            onDataChange={() => {
+              onDataChange();
+              setIsAuthenticated(localStorage.getItem('scholars_admin_session') === 'true');
+            }}
+            refreshKey={refreshKey}
+            cleanUpMode={cleanUpMode}
+            setCleanUpMode={setCleanUpMode}
+            onClose={() => navigate('/')}
+          />
         )}
-      </AnimatePresence>
-    </>
+      </div>
+    </div>
   );
 }

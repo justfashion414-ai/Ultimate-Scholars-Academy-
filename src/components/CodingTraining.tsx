@@ -49,6 +49,8 @@ import { saveCodingProject, fetchStudentCodingProjects } from '../lib/firebaseSe
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import ForcePasswordSetup from './ForcePasswordSetup';
+import GraphicsLab from './coding/GraphicsLab';
+import ProfileAvatar from './coding/ProfileAvatar';
 
 // IMPORTANT: Editor starts COMPLETELY EMPTY by default as requested.
 const DEFAULT_FILES = {
@@ -459,6 +461,17 @@ export default function CodingTraining() {
     );
   }
 
+  // GRAPHICS TRACK: graphics students land in the design studio, not the code lab
+  if ((currentStudent.track || 'coding') === 'graphics') {
+    return (
+      <GraphicsLab
+        profile={currentStudent}
+        onSignOut={handleSignOut}
+        onProfileUpdated={handleSaveStudentProfile}
+      />
+    );
+  }
+
   // SECURITY GATE: flagged administrators must set a permanent password first
   if (forcedPwGate) {
     return (
@@ -539,6 +552,8 @@ export default function CodingTraining() {
           <Play className="w-3.5 h-3.5 fill-current" />
           <span>Run</span>
         </button>
+
+        <ProfileAvatar profile={currentStudent} onUpdated={handleSaveStudentProfile} />
       </header>
 
       {/* MOBILE PANE SWITCHER: Code / Preview / Console */}

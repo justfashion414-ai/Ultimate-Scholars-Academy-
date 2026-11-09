@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { 
-  Shield, UserPlus, Award, Camera, Video, Calendar, Quote, Lock, Settings, Code2, 
+  Shield, UserPlus, Award, Camera, Video, Calendar, Quote, Lock, Settings, Code2, Palette, Image as ImageIcon, 
   Loader2, AlertTriangle, RefreshCw, LogOut, Menu, CheckCircle2 
 } from 'lucide-react';
 import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
@@ -18,6 +18,7 @@ import TeacherTributesPanel from './TeacherTributesPanel';
 import AdminUsersPanel from './AdminUsersPanel';
 import SettingsPanel from './SettingsPanel';
 import StudentProjectsPanel from './StudentProjectsPanel';
+import GraphicsSubmissionsPanel from './GraphicsSubmissionsPanel';
 
 interface AdminLayoutProps {
   onDataChange: () => void;
@@ -27,7 +28,7 @@ interface AdminLayoutProps {
   onClose?: () => void;
 }
 
-type TabType = 'queue' | 'students' | 'superlatives' | 'photos' | 'videos' | 'timeline' | 'tributes' | 'projects' | 'admins' | 'settings';
+type TabType = 'queue' | 'students' | 'superlatives' | 'photos' | 'videos' | 'timeline' | 'tributes' | 'projects' | 'graphics' | 'admins' | 'settings';
 
 export default function AdminLayout({ 
   onDataChange, 
@@ -150,6 +151,8 @@ export default function AdminLayout({
         return <TeacherTributesPanel {...props} />;
       case 'projects':
         return <StudentProjectsPanel {...props} />;
+      case 'graphics':
+        return <GraphicsSubmissionsPanel {...props} />;
       case 'admins':
         return <AdminUsersPanel {...props} />;
       case 'settings':
@@ -245,6 +248,7 @@ export default function AdminLayout({
                   { id: 'timeline', label: 'Milestones', icon: Calendar },
                   { id: 'tributes', label: 'Teacher Tributes', icon: Quote },
                   { id: 'projects', label: 'Student Projects', icon: Code2 },
+                  { id: 'graphics', label: 'Graphics Work', icon: Palette },
                   { id: 'admins', label: 'Brand & Admins', icon: Lock },
                   { id: 'settings', label: 'Settings & Layout', icon: Settings }
                 ].map(tab => {

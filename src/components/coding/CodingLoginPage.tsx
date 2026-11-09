@@ -17,7 +17,8 @@ import {
   Sparkles,
   CloudCheck,
   User,
-  School
+  School,
+  Palette
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { 
@@ -44,8 +45,10 @@ type AuthMode = 'email_password' | 'student_id_pin';
 type SubAction = 'signin' | 'register';
 
 export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps) {
-  // Method selection: Primary is email_password, secondary is student_id_pin
-  const [authMethod, setAuthMethod] = useState<AuthMode>('email_password');
+  // Method selection: Primary is student_id_pin, secondary is email_password
+  const [authMethod, setAuthMethod] = useState<AuthMode>('student_id_pin');
+  // Track selection at registration: coding or graphics
+  const [track, setTrack] = useState<'coding' | 'graphics'>('coding');
   const [subAction, setSubAction] = useState<SubAction>('signin');
 
   // Form fields: Email & Password
@@ -104,12 +107,13 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
         className: 'Student',
         authMethod: 'email_password',
         loginIdentifier: cleanEmail,
+        track,
         lastActive: new Date().toISOString()
       };
       await saveStudentProfile(profile);
     }
 
-    setSuccessNotice(`Welcome back, ${profile.studentName}! Entering coding workspace...`);
+    setSuccessNotice(`Welcome back, ${profile.studentName}! Opening your workspace...`);
     clearSensitiveInputs();
 
     setTimeout(() => {
@@ -167,7 +171,7 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
         };
 
         await saveStudentProfile(newProfile);
-        setSuccessNotice('Account created successfully! Loading your coding workspace...');
+        setSuccessNotice(`Account created successfully! Opening your ${track === 'graphics' ? 'graphics studio' : 'coding lab'}...`);
         
         // Wipe sensitive inputs
         clearSensitiveInputs();
@@ -246,10 +250,11 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
           cleanId,
           idFullName.trim(),
           cleanPin,
-          'Student'
+          'Student',
+          track
         );
 
-        setSuccessNotice(`Student ID ${cleanId} registered! Loading your coding workspace...`);
+        setSuccessNotice(`Student ID ${cleanId} registered! Opening your ${track === 'graphics' ? 'graphics studio' : 'coding lab'}...`);
         clearSensitiveInputs();
 
         setTimeout(() => {
@@ -258,7 +263,7 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
 
       } else {
         const profile = await loginStudentWithIdPin(cleanId, cleanPin);
-        setSuccessNotice(`Welcome back, ${profile.studentName}! Entering coding workspace...`);
+        setSuccessNotice(`Welcome back, ${profile.studentName}! Opening your workspace...`);
         clearSensitiveInputs();
 
         setTimeout(() => {
@@ -307,7 +312,7 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
           </div>
           <div className="hidden sm:block text-right">
             <div className="text-xs font-bold text-white tracking-wide">Ultimate Scholars Academy</div>
-            <div className="text-[10px] text-white/50 font-mono">Student Web Coding Studio</div>
+            <div className="text-[10px] text-white/50 font-mono">Student Learning Studio</div>
           </div>
         </div>
       </header>
@@ -326,10 +331,10 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
               <GraduationCap className="w-8 h-8" />
             </div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-              Student Coding Portal
+              Student Learning Portal
             </h1>
             <p className="text-xs sm:text-sm text-white/70 mt-1.5 max-w-sm mx-auto leading-relaxed">
-              Log in to access your coding interface and automatically sync your HTML, CSS & JS projects across any lab computer.
+              Log in to open your class workspace. Coding students get the code lab; graphics students get the design studio, and your work syncs across any lab computer.
             </p>
           </div>
 
@@ -359,21 +364,6 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
                 <button
                   type="button"
                   onClick={() => { 
-                    setAuthMethod('email_password'); 
-                    clearSensitiveInputs();
-                  }}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    authMethod === 'email_password'
-                      ? 'bg-[#D4A017] text-[#0F2557] shadow-md'
-                      : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  <Mail className="w-4 h-4" />
-                  <span>Email & Password</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { 
                     setAuthMethod('student_id_pin'); 
                     clearSensitiveInputs();
                   }}
@@ -386,8 +376,60 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
                   <Hash className="w-4 h-4" />
                   <span>Student ID & PIN</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => { 
+                    setAuthMethod('email_password'); 
+                    clearSensitiveInputs();
+                  }}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    authMethod === 'email_password'
+                      ? 'bg-[#D4A017] text-[#0F2557] shadow-md'
+                      : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  <Mail className="w-4 h-4" />
+                  <span>Email & Password</span>
+                </button>
               </div>
             </div>
+
+            {/* TRACK SELECTOR (REGISTRATION ONLY) */}
+            {subAction === 'register' && (
+              <div>
+                <label className="block text-[11px] font-bold text-white/50 uppercase tracking-wider mb-2">
+                  Select Your Class Track
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTrack('coding')}
+                    className={`flex flex-col items-center gap-1.5 py-3.5 px-3 rounded-2xl border text-center transition-all cursor-pointer ${
+                      track === 'coding'
+                        ? 'bg-[#D4A017]/15 border-[#D4A017] shadow-md'
+                        : 'bg-white/5 border-white/10 hover:border-white/25'
+                    }`}
+                  >
+                    <Code2 className={`w-5 h-5 ${track === 'coding' ? 'text-[#D4A017]' : 'text-white/50'}`} />
+                    <span className={`text-xs font-bold ${track === 'coding' ? 'text-[#D4A017]' : 'text-white/70'}`}>Coding Track</span>
+                    <span className="text-[10px] text-white/45 leading-tight">Web design with HTML, CSS & JavaScript</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTrack('graphics')}
+                    className={`flex flex-col items-center gap-1.5 py-3.5 px-3 rounded-2xl border text-center transition-all cursor-pointer ${
+                      track === 'graphics'
+                        ? 'bg-[#D4A017]/15 border-[#D4A017] shadow-md'
+                        : 'bg-white/5 border-white/10 hover:border-white/25'
+                    }`}
+                  >
+                    <Palette className={`w-5 h-5 ${track === 'graphics' ? 'text-[#D4A017]' : 'text-white/50'}`} />
+                    <span className={`text-xs font-bold ${track === 'graphics' ? 'text-[#D4A017]' : 'text-white/70'}`}>Graphics Track</span>
+                    <span className="text-[10px] text-white/45 leading-tight">Design logos, posters & flyers; submit as images</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* TAB 1: EMAIL & PASSWORD */}
             {authMethod === 'email_password' && (
@@ -708,7 +750,7 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
 
       {/* FOOTER */}
       <footer className="border-t border-white/10 bg-[#071126] px-6 py-4 text-center text-xs text-white/40 font-mono">
-        Ultimate Scholars Academy • Student Web Coding Studio
+        Ultimate Scholars Academy • Student Learning Studio
       </footer>
     </div>
   );

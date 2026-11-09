@@ -121,6 +121,18 @@ service cloud.firestore {
     }
 
     // Coding Students: Student accounts created with Email/Password or Student ID + PIN
+    match /graphics_submissions/{submissionId} {
+      allow read: if true;
+      allow create, update: if isValidId(submissionId) &&
+                            request.resource.data.keys().hasAll(['id', 'studentId', 'studentName', 'title', 'imageUrl']) &&
+                            request.resource.data.id is string &&
+                            request.resource.data.studentId is string &&
+                            request.resource.data.studentName is string &&
+                            request.resource.data.title is string &&
+                            request.resource.data.imageUrl is string;
+      allow delete: if isValidId(submissionId);
+    }
+
     match /coding_students/{studentDocId} {
       allow read: if true;
       allow create, update: if isValidId(studentDocId) &&

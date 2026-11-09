@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './lib/firebase';
 import { subscribeCustomSections } from './lib/firebaseService';
@@ -41,6 +41,14 @@ function AppContent({
   TARGET_GRADUATION_DATE: string;
 }) {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // The 3-click logo trigger now opens the admin portal as a normal page at /admin
+  useEffect(() => {
+    const handleTriggerAdmin = () => navigate('/admin');
+    window.addEventListener('trigger-admin-portal', handleTriggerAdmin);
+    return () => window.removeEventListener('trigger-admin-portal', handleTriggerAdmin);
+  }, [navigate]);
   const [visibility, setVisibility] = useState<Record<string, boolean>>({
     about: true,
     graduands: true,
@@ -483,15 +491,17 @@ function AppContent({
         <Route path="/coding-training" element={
           <CodingTraining />
         } />
-      </Routes>
 
-      {/* PERSISTENT FLOATING ADMIN GATEKEEPER AND CONTROL PANEL */}
-      <AdminPortal 
-        onDataChange={handleDataChange} 
-        refreshKey={refreshKey} 
-        cleanUpMode={cleanUpMode} 
-        setCleanUpMode={setCleanUpMode} 
-      />
+        {/* ADMIN CONTROL PANEL: a normal page at /admin */}
+        <Route path="/admin" element={
+          <AdminPortal
+            onDataChange={handleDataChange}
+            refreshKey={refreshKey}
+            cleanUpMode={cleanUpMode}
+            setCleanUpMode={setCleanUpMode}
+          />
+        } />
+      </Routes>
     </div>
   );
 }
