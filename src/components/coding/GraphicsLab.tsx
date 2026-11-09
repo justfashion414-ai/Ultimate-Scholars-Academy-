@@ -104,7 +104,7 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
         studentId: profile.studentId,
         studentName: profile.studentName,
         title: title.trim(),
-        description: description.trim() || undefined,
+        ...(description.trim() ? { description: description.trim() } : {}),
         imageUrl,
         createdAt: new Date().toISOString()
       };
@@ -160,7 +160,7 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
           >
             <Menu className="w-5 h-5" />
           </button>
-          <ProfileAvatar profile={profile} onUpdated={onProfileUpdated} />
+          <ProfileAvatar profile={profile} onUpdated={onProfileUpdated} onSignOut={onSignOut} />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <Palette className="w-3.5 h-3.5 text-[#D4A017] shrink-0" />
@@ -426,7 +426,7 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
             {/* Sidebar header */}
             <div className="shrink-0 p-4 border-b border-white/10 flex items-start justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <ProfileAvatar profile={profile} onUpdated={onProfileUpdated} />
+                <ProfileAvatar profile={profile} onUpdated={onProfileUpdated} onSignOut={onSignOut} />
                 <div className="min-w-0">
                   <p className="text-sm font-bold truncate">{profile.studentName}</p>
                   <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full bg-[#D4A017]/15 text-[#D4A017] text-[10px] font-bold border border-[#D4A017]/30">

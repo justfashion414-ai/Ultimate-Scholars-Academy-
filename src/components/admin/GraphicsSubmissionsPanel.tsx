@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Palette, Eye, Trash2, MessageSquare, Loader2, AlertTriangle, X,
-  CheckCircle2, Award, Clock, ExternalLink, Search
+  CheckCircle2, Award, Clock, ExternalLink, Search, ListChecks, ArrowRight,
+  Inbox, User
 } from 'lucide-react';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
@@ -27,6 +28,7 @@ export default function GraphicsSubmissionsPanel({ onDataChange }: { onDataChang
   const [live, setLive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [studentFilter, setStudentFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'unmarked' | 'marked'>('unmarked');
   const [openId, setOpenId] = useState<string | null>(null);
   const [gradeInput, setGradeInput] = useState('');
   const [commentInput, setCommentInput] = useState('');
@@ -167,15 +169,32 @@ export default function GraphicsSubmissionsPanel({ onDataChange }: { onDataChang
 
   const visible = useMemo(() => {
     let list = submissions;
+    if (statusFilter === 'unmarked') list = list.filter((s) => !s.grade);
+    else if (statusFilter === 'marked') list = list.filter((s) => s.grade);
     if (studentFilter !== 'all') list = list.filter((s) => s.studentId === studentFilter);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter((s) => s.title.toLowerCase().includes(q) || s.studentName.toLowerCase().includes(q) || studentNameOf(s.studentId).toLowerCase().includes(q));
     }
     return list;
-  }, [submissions, studentFilter, searchQuery, students]);
+  }, [submissions, studentFilter, statusFilter, searchQuery, students]);
 
   const markedCount = submissions.filter((s) => s.grade).length;
+  const unmarkedCount = submissions.length - markedCount;
+
+  // Queue navigation: step to the next submission that still needs marking
+  const openSubIndex = useMemo(() => visible.findIndex((s) => s.id === openId), [visible, openId]);
+  const nextUnmarked = useMemo(() => {
+    if (openSubIndex < 0) return null;
+    for (let i = openSubIndex + 1; i < visible.length; i++) {
+      if (!visible[i].grade) return visible[i];
+    }
+    return visible.find((s) => !s.grade && s.id !== openId) || null;
+  }, [visible, openSubIndex, openId]);
+  const studentSubs = useMemo(
+    () => (openSub ? submissions.filter((s) => s.studentId === openSub.studentId) : []),
+    [submissions, openSub]
+  );
 
   if (openSub) {
     const comments = openSub.teacherComments || [];
@@ -194,9 +213,41 @@ export default function GraphicsSubmissionsPanel({ onDataChange }: { onDataChang
               {openSub.studentName} · submitted {timeAgo(openSub.createdAt)}
             </p>
           </div>
-          <span className={`ml-auto px-2.5 py-1 rounded-full text-[10px] font-bold border ${openSub.grade ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40' : 'bg-white/5 text-white/50 border-white/10'}`}>
-            {openSub.grade ? `Marked ${openSub.grade}/100` : 'Unmarked'}
+          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${openSub.grade ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40' : 'bg-amber-500/15 text-amber-300 border-amber-500/40'}`}>
+            {openSub.grade ? `Marked ${openSub.grade}/100` : 'Needs marking'}
           </span>
+          {nextUnmarked && (
+            <button
+              onClick={() => openDetail(nextUnmarked)}
+              className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#D4A017] text-[#030914] text-xs font-bold hover:bg-[#e5b31f] cursor-pointer shrink-0"
+              title={`Next unmarked: ${nextUnmarked.title}`}
+            >
+              Next unmarked <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* STUDENT CONTEXT STRIP */}
+        <div className="flex flex-wrap items-center gap-3 p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
+          <div className="p-2 rounded-lg bg-white/5 text-[#D4A017]"><User className="w-4 h-4" /></div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold truncate">{openSub.studentName}</p>
+            <p className="text-[10px] text-white/45">
+              {studentSubs.length} submission{studentSubs.length === 1 ? '' : 's'} in total · {studentSubs.filter((x) => !x.grade).length} still needing a mark
+            </p>
+          </div>
+          <div className="flex items-center gap-2 ml-auto flex-wrap">
+            {studentSubs.slice(0, 6).map((sub) => (
+              <button
+                key={sub.id}
+                onClick={() => openDetail(sub)}
+                title={sub.title}
+                className={`w-10 h-10 rounded-lg overflow-hidden border-2 transition-colors cursor-pointer ${sub.id === openSub.id ? 'border-[#D4A017]' : 'border-white/10 hover:border-white/40'}`}
+              >
+                <img src={sub.imageUrl} alt={sub.title} className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -337,19 +388,41 @@ export default function GraphicsSubmissionsPanel({ onDataChange }: { onDataChang
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Graphics students', value: graphicsStudents.length, icon: Palette },
-          { label: 'Total submissions', value: submissions.length, icon: Eye },
-          { label: 'Marked', value: markedCount, icon: Award }
+          { label: 'Graphics students', value: graphicsStudents.length, icon: Palette, tone: 'text-[#D4A017]' },
+          { label: 'Total submissions', value: submissions.length, icon: Eye, tone: 'text-[#D4A017]' },
+          { label: 'Needs marking', value: unmarkedCount, icon: ListChecks, tone: unmarkedCount ? 'text-amber-300' : 'text-white/40' },
+          { label: 'Marked', value: markedCount, icon: Award, tone: 'text-emerald-400' }
         ].map((m) => (
-          <div key={m.label} className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/10">
-            <div className="p-2 rounded-lg bg-white/5 text-[#D4A017]"><m.icon className="w-4 h-4" /></div>
+          <div key={m.label} className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
+            <div className={`p-2 rounded-lg bg-white/5 ${m.tone}`}><m.icon className="w-4 h-4" /></div>
             <div>
-              <div className="font-bold text-sm">{m.value}</div>
+              <div className={`font-bold text-base ${m.tone}`}>{m.value}</div>
               <div className="text-[10px] text-white/50">{m.label}</div>
             </div>
           </div>
+        ))}
+      </div>
+
+      {/* MARKING QUEUE TABS */}
+      <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/[0.03] border border-white/10 w-full sm:w-auto sm:inline-flex">
+        {([
+          { key: 'unmarked', label: 'Needs marking', count: unmarkedCount, icon: ListChecks },
+          { key: 'marked', label: 'Marked', count: markedCount, icon: Award },
+          { key: 'all', label: 'All', count: submissions.length, icon: Inbox }
+        ] as const).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setStatusFilter(t.key)}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold transition-colors cursor-pointer ${
+              statusFilter === t.key ? 'bg-[#D4A017] text-[#0F2557]' : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <t.icon className="w-3.5 h-3.5" />
+            {t.label}
+            <span className={`px-1.5 py-0.5 rounded-full text-[9px] ${statusFilter === t.key ? 'bg-[#0F2557]/20' : 'bg-white/10'}`}>{t.count}</span>
+          </button>
         ))}
       </div>
 
@@ -381,7 +454,9 @@ export default function GraphicsSubmissionsPanel({ onDataChange }: { onDataChang
           <p className="text-xs text-white/50">
             {submissions.length === 0
               ? 'No graphics submissions yet. They appear here live once students upload in their studio.'
-              : 'No submissions match this filter.'}
+              : statusFilter === 'unmarked'
+                ? 'Nothing waiting on you. Every submission has a mark.'
+                : 'No submissions match this filter.'}
           </p>
         </div>
       )}
@@ -403,8 +478,8 @@ export default function GraphicsSubmissionsPanel({ onDataChange }: { onDataChang
                   {g.grade}/100
                 </span>
               ) : (
-                <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/70 text-[9px] font-semibold text-white/50 border border-white/10">
-                  Unmarked
+                <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-amber-500/90 text-[9px] font-bold text-[#2a1c00]">
+                  Needs marking
                 </span>
               )}
             </div>

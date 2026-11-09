@@ -562,7 +562,7 @@ export default function CodingTraining() {
           <span>Run</span>
         </button>
 
-        <ProfileAvatar profile={currentStudent} onUpdated={handleSaveStudentProfile} />
+        <ProfileAvatar profile={currentStudent} onUpdated={handleSaveStudentProfile} onSignOut={() => setShowExitConfirm(true)} />
       </header>
 
       {/* MOBILE PANE SWITCHER: Code / Preview / Console */}
