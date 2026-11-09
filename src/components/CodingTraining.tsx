@@ -45,7 +45,9 @@ import TeacherMonitorModal from './coding/TeacherMonitorModal';
 import { CodingTemplate } from './coding/templates';
 import { CodingProject, CodingStudentProfile } from '../types';
 import { saveCodingProject, fetchStudentCodingProjects } from '../lib/firebaseService';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import ForcePasswordSetup from './ForcePasswordSetup';
 
 // IMPORTANT: Editor starts COMPLETELY EMPTY by default as requested.
 const DEFAULT_FILES = {
@@ -160,6 +162,26 @@ export default function CodingTraining() {
       }
     });
     return () => unsub();
+  }, [currentStudent]);
+
+  // SECURITY GATE: a flagged admin must set a permanent password before the interface
+  const [forcedPwGate, setForcedPwGate] = useState<{ email: string } | null>(null);
+  useEffect(() => {
+    const user = auth.currentUser;
+    const emailAddr = user?.email?.toLowerCase();
+    if (!currentStudent || !emailAddr) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'admins', emailAddr));
+        if (!cancelled && snap.exists() && (snap.data() as any).mustSetPassword === true) {
+          setForcedPwGate({ email: emailAddr });
+        }
+      } catch {
+        // ignore read failures; the gate also applies at sign-in
+      }
+    })();
+    return () => { cancelled = true; };
   }, [currentStudent]);
 
   const hasExistingCode = useMemo(() => {
@@ -409,6 +431,16 @@ export default function CodingTraining() {
         onLoginSuccess={(profile) => {
           handleSaveStudentProfile(profile);
         }} 
+      />
+    );
+  }
+
+  // SECURITY GATE: flagged administrators must set a permanent password first
+  if (forcedPwGate) {
+    return (
+      <ForcePasswordSetup
+        email={forcedPwGate.email}
+        onDone={() => setForcedPwGate(null)}
       />
     );
   }

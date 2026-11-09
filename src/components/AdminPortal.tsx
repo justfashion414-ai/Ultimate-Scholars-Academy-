@@ -3,7 +3,9 @@ import { Shield, Trash2, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import AdminLayout from './admin/AdminLayout';
 import { fetchPendingSubmissions } from '../lib/firebaseService';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import ForcePasswordSetup from './ForcePasswordSetup';
 
 interface AdminPortalProps {
   onDataChange: () => void;
@@ -25,6 +27,8 @@ export default function AdminPortal({
   });
   const [pendingCount, setPendingCount] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  // SECURITY GATE: set when the signed-in admin still has a mandatory password change
+  const [forcedPw, setForcedPw] = useState(false);
 
   // Listen for 3-click logo trigger
   useEffect(() => {
@@ -43,6 +47,24 @@ export default function AdminPortal({
     });
     return () => unsubscribe();
   }, []);
+
+  // SECURITY GATE: when the portal opens, a flagged admin must set a permanent password first
+  useEffect(() => {
+    if (!isOpen || !currentUser?.email) {
+      setForcedPw(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'admins', currentUser.email.toLowerCase()));
+        if (!cancelled) setForcedPw(snap.exists() && (snap.data() as any).mustSetPassword === true);
+      } catch {
+        if (!cancelled) setForcedPw(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isOpen, currentUser]);
 
   // Read current authentication status regularly
   useEffect(() => {
@@ -180,6 +202,13 @@ export default function AdminPortal({
 
               {/* RENDER THE LAYOUT AND ALL ITS TABS */}
               <div className="flex-grow min-h-0 flex flex-col overflow-hidden">
+                {forcedPw && currentUser?.email ? (
+                  <ForcePasswordSetup
+                    email={currentUser.email.toLowerCase()}
+                    embedded
+                    onDone={() => setForcedPw(false)}
+                  />
+                ) : (
                 <AdminLayout 
                   onDataChange={() => {
                     // Refresh status in parent components
@@ -191,6 +220,7 @@ export default function AdminPortal({
                   setCleanUpMode={setCleanUpMode}
                   onClose={() => setIsOpen(false)}
                 />
+                )}
               </div>
             </motion.div>
           </div>

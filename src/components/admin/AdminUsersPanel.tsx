@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { UserPlus, AlertTriangle, Loader2, Shield, Camera, Upload, Star, X } from 'lucide-react';
+import { UserPlus, AlertTriangle, Loader2, Shield, Camera, Upload, Star, X, KeyRound, Copy, CheckCircle2 } from 'lucide-react';
 import { 
   fetchAdmins, 
   addAdminUser, 
@@ -25,6 +25,12 @@ export default function AdminUsersPanel({ onDataChange, refreshKey = 0 }: AdminU
   const [addAdminLoading, setAddAdminLoading] = useState(false);
   const [addAdminError, setAddAdminError] = useState('');
   const [newAdminEmail, setNewAdminEmail] = useState('');
+  // Temporary password issuance
+  const [issuingFor, setIssuingFor] = useState<string | null>(null);
+  const [issueLoading, setIssueLoading] = useState(false);
+  const [issueError, setIssueError] = useState('');
+  const [issuedPassword, setIssuedPassword] = useState('');
+  const [copiedTemp, setCopiedTemp] = useState(false);
 
   // Branding states
   const [schoolLogo, setSchoolLogo] = useState<string>('');
@@ -90,6 +96,38 @@ export default function AdminUsersPanel({ onDataChange, refreshKey = 0 }: AdminU
       setAddAdminError(err.message || "Failed to authorize email.");
     } finally {
       setAddAdminLoading(false);
+    }
+  };
+
+  const handleIssueTempPassword = async (targetEmail: string) => {
+    const ok = confirm(
+      `Issue a temporary password for ${targetEmail}?\n\n` +
+      'This replaces their current password. On their next sign-in to the student coding tab or the admin dashboard, they will be required to set a new permanent password before they can continue.'
+    );
+    if (!ok) return;
+    setIssuingFor(targetEmail);
+    setIssueError('');
+    setIssuedPassword('');
+    setCopiedTemp(false);
+    setIssueLoading(true);
+    try {
+      const token = auth.currentUser ? await auth.currentUser.getIdToken() : '';
+      const res = await fetch('/.netlify/functions/admin-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ action: 'issue-temp-password', email: targetEmail })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not issue the temporary password.');
+      setIssuedPassword(data.tempPassword || '');
+    } catch (err: any) {
+      console.error('Temporary password issuance failed:', err);
+      setIssueError(err.message || 'Could not issue the temporary password.');
+    } finally {
+      setIssueLoading(false);
     }
   };
 
@@ -301,9 +339,30 @@ export default function AdminUsersPanel({ onDataChange, refreshKey = 0 }: AdminU
               <p className="text-sm font-bold text-white font-mono">opadijoadeniyi20@gmail.com</p>
               <span className="text-[10px] font-mono uppercase tracking-wider text-[#D4A017] font-bold">Primary Super Admin</span>
             </div>
-            <span className="px-2 py-1 bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20 rounded-lg text-[9px] font-mono uppercase tracking-wider font-bold">Immutable</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleIssueTempPassword('opadijoadeniyi20@gmail.com')}
+                disabled={issueLoading && issuingFor === 'opadijoadeniyi20@gmail.com'}
+                title="Issue a temporary password for this administrator"
+                className="p-2 hover:bg-[#D4A017]/15 text-[#D4A017] rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {(issueLoading && issuingFor === 'opadijoadeniyi20@gmail.com') ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <KeyRound className="w-4 h-4" />
+                )}
+              </button>
+              <span className="px-2 py-1 bg-[#D4A017]/10 text-[#D4A017] border border-[#D4A017]/20 rounded-lg text-[9px] font-mono uppercase tracking-wider font-bold">Immutable</span>
+            </div>
           </div>
 
+          {issueError && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-semibold">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              {issueError}
+            </div>
+          )}
           {fetchingAdmins ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="w-6 h-6 text-[#D4A017] animate-spin" />
@@ -319,17 +378,73 @@ export default function AdminUsersPanel({ onDataChange, refreshKey = 0 }: AdminU
                       Added {new Date(admin.addedAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveAdmin(admin.email)}
-                    className="p-2 hover:bg-rose-500/15 text-rose-400 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleIssueTempPassword(admin.email)}
+                      disabled={issueLoading && issuingFor === admin.email}
+                      title="Issue a temporary password for this administrator"
+                      className="p-2 hover:bg-[#D4A017]/15 text-[#D4A017] rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {(issueLoading && issuingFor === admin.email) ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <KeyRound className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAdmin(admin.email)}
+                      className="p-2 hover:bg-rose-500/15 text-rose-400 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))
           )}
         </div>
+
+        {/* TEMPORARY PASSWORD RESULT MODAL */}
+        {issuedPassword && issuingFor && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/70 backdrop-blur-sm">
+            <div className="bg-[#0F2557] border border-[#D4A017]/40 rounded-2xl p-6 max-w-md w-full text-left space-y-4 shadow-2xl">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-[#D4A017]" />
+                <h3 className="text-lg font-serif font-bold text-white">Temporary password issued</h3>
+              </div>
+              <p className="text-xs text-white/70 leading-relaxed">
+                Give this temporary password to <span className="text-white font-bold">{issuingFor}</span>. It replaces
+                their old password. The next time they sign in to the student coding tab or the admin dashboard, they
+                will be required to set their own permanent password before they can continue.
+              </p>
+              <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-4 py-3">
+                <code className="flex-1 font-mono text-[#D4A017] font-bold tracking-wider text-sm break-all">{issuedPassword}</code>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(issuedPassword).catch(() => {});
+                    setCopiedTemp(true);
+                  }}
+                  className="p-2 hover:bg-white/10 text-white/70 rounded-lg transition-colors cursor-pointer shrink-0"
+                  title="Copy password"
+                >
+                  {copiedTemp ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIssuedPassword('');
+                  setIssuingFor(null);
+                }}
+                className="w-full py-3 bg-[#D4A017] hover:bg-[#b0820e] text-[#0F2557] font-bold text-sm rounded-xl transition-all cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
