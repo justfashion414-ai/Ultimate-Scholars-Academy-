@@ -19,10 +19,11 @@ import {
   Palette
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  updateProfile 
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth, db } from '../../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -39,6 +40,7 @@ type SubAction = 'signin' | 'register';
 export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps) {
   // Track selection at registration: coding or graphics
   const [track, setTrack] = useState<'coding' | 'graphics'>('coding');
+  const [forgotPw, setForgotPw] = useState(false);
   const [subAction, setSubAction] = useState<SubAction>('signin');
 
   // Form fields: Email & Password
@@ -97,6 +99,31 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
     }, 400);
   };
 
+  // FORGOT PASSWORD: send a Firebase password reset email
+  const sendResetLink = async () => {
+    const resetEmail = email.trim().toLowerCase();
+    if (!resetEmail) {
+      setErrorMsg('Enter the email address you registered with, then tap Send Password Reset Link.');
+      return;
+    }
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      setSuccessNotice(`Password reset email sent to ${resetEmail}. Open it (check spam too) and follow the link to set a new password.`);
+      setForgotPw(false);
+      clearSensitiveInputs();
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (code === 'auth/user-not-found') setErrorMsg('No account found with that email address.');
+      else if (code === 'auth/invalid-email') setErrorMsg('That email address does not look valid.');
+      else if (code === 'auth/too-many-requests') setErrorMsg('Too many attempts. Please wait a few minutes and try again.');
+      else setErrorMsg('Could not send the reset email. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // -------------------------------------------------------------
   // HANDLERS: EMAIL & PASSWORD (PRIMARY)
   // -------------------------------------------------------------
@@ -104,6 +131,11 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
     e.preventDefault();
     setErrorMsg('');
     setSuccessNotice('');
+
+    if (forgotPw && subAction === 'signin') {
+      await sendResetLink();
+      return;
+    }
 
     const cleanEmail = email.trim().toLowerCase();
     const cleanPass = password;
@@ -143,6 +175,7 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
           className: 'Student',
           authMethod: 'email_password',
           loginIdentifier: cleanEmail,
+          track,
           lastActive: new Date().toISOString()
         };
 
@@ -376,9 +409,20 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-1.5">
-                      {subAction === 'register' ? 'Create Password' : 'Password'} <span className="text-amber-400">*</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-white/80">
+                        {subAction === 'register' ? 'Create Password' : 'Password'} <span className="text-amber-400">*</span>
+                      </label>
+                      {subAction === 'signin' && (
+                        <button
+                          type="button"
+                          onClick={() => { setForgotPw(!forgotPw); setErrorMsg(''); setSuccessNotice(''); }}
+                          className="text-[11px] font-semibold text-[#D4A017] hover:text-amber-300 cursor-pointer"
+                        >
+                          {forgotPw ? 'Back to sign in' : 'Forgot password?'}
+                        </button>
+                      )}
+                    </div>
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -427,6 +471,12 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
                     </div>
                   )}
 
+{subAction === 'signin' && forgotPw && (
+                    <p className="text-[11px] text-white/50 leading-relaxed">
+                      Enter the email you registered with above, then tap Send Password Reset Link. A reset email will arrive in your inbox.
+                    </p>
+                  )}
+
                   <button
                     type="submit"
                     disabled={loading}
@@ -435,7 +485,7 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
                     {subAction === 'signin' ? (
                       <>
                         <LogIn className="w-4 h-4" />
-                        <span>{loading ? 'Authenticating...' : 'Sign In to Coding Lab'}</span>
+                        <span>{loading ? (forgotPw ? 'Sending...' : 'Authenticating...') : forgotPw ? 'Send Password Reset Link' : 'Sign In to Coding Lab'}</span>
                       </>
                     ) : (
                       <>

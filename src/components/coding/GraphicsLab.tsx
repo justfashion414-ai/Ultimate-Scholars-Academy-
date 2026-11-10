@@ -15,7 +15,8 @@ import ProfileAvatar from './ProfileAvatar';
 interface GraphicsLabProps {
   profile: CodingStudentProfile;
   onSignOut: () => void;
-  onProfileUpdated: (p: CodingStudentProfile) => void;
+  onProfileUpdated: (p: CodingStudentProfile) => void;  isAdmin?: boolean;
+
 }
 
 function timeAgo(iso?: string): string {
@@ -29,7 +30,7 @@ function timeAgo(iso?: string): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: GraphicsLabProps) {
+export default function GraphicsLab({ profile, onSignOut, onProfileUpdated, isAdmin = false }: GraphicsLabProps) {
   const [submissions, setSubmissions] = useState<GraphicsSubmission[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -555,6 +556,7 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
                   <Upload className="w-4 h-4" />
                   <span>Submit an Assignment</span>
                 </button>
+                {isAdmin && (
                 <button
                   onClick={() => scrollToSection('graphics-subs')}
                   className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium text-xs transition-colors cursor-pointer"
@@ -563,11 +565,13 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
                   <span>My Submissions</span>
                   <span className="ml-auto px-1.5 py-0.5 bg-white/10 rounded-full text-[10px]">{submissions.length}</span>
                 </button>
+                )}
               </div>
             </div>
 
             {/* Sidebar footer */}
             <div className="shrink-0 p-4 border-t border-white/10 space-y-2.5">
+              {isAdmin && (
               <button
                 onClick={handleSwitchToCoding}
                 className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-[#D4A017]/40 text-[#D4A017] font-semibold transition-colors cursor-pointer text-xs"
@@ -576,6 +580,7 @@ export default function GraphicsLab({ profile, onSignOut, onProfileUpdated }: Gr
                 <Code2 className="w-3.5 h-3.5" />
                 <span>Switch to Coding Lab</span>
               </button>
+              )}
               <button
                 onClick={onSignOut}
                 className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 hover:text-rose-100 font-semibold transition-colors cursor-pointer text-xs"

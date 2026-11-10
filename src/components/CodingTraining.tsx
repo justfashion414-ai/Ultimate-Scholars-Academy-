@@ -1,26 +1,14 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Code2, 
-  Play, 
-  Terminal, 
-  ChevronLeft, 
-  FileCode, 
-  FileJson, 
-  FileText,
+import {
+  Code2,
+  Play,
+  Terminal,
+  ChevronLeft,
+  FileCode,
   RotateCcw,
-  ExternalLink,
-  BookOpen,
   Laptop,
-  LayoutTemplate,
   Save,
-  FolderOpen,
-  User,
   GraduationCap,
-  Sparkles,
   Check,
-  AlertCircle,
-  CloudCheck,
   LogOut,
   Menu,
   X,
@@ -39,11 +27,8 @@ import 'prismjs/components/prism-css';
 import 'prismjs/components/prism-markup';
 
 // Modals, Pages and Types
-import CodingTemplatesModal from './coding/CodingTemplatesModal';
 import CodingLoginPage from './coding/CodingLoginPage';
-import SavedProjectsModal from './coding/SavedProjectsModal';
 import TeacherMonitorModal from './coding/TeacherMonitorModal';
-import { CodingTemplate } from './coding/templates';
 import { CodingProject, CodingStudentProfile } from '../types';
 import { saveCodingProject, fetchStudentCodingProjects, saveStudentProfile } from '../lib/firebaseService';
 import { auth, db } from '../lib/firebase';
@@ -63,9 +48,18 @@ type MobilePane = 'code' | 'preview';
 
 
 
+// Single-editor helper: fold CSS/JS from older saved projects into one HTML file
+const mergeFilesToHtml = (f: { 'index.html'?: string; 'styles.css'?: string; 'script.js'?: string }): string => {
+  let html = f['index.html'] || '';
+  const css = (f['styles.css'] || '').trim();
+  const js = (f['script.js'] || '').trim();
+  if (css) html += `\n\n<style>\n${css}\n</style>`;
+  if (js) html += `\n\n<script>\n${js}\n</script>`;
+  return html;
+};
+
 export default function CodingTraining() {
   const [files, setFiles] = useState(DEFAULT_FILES);
-  const [activeFile, setActiveFile] = useState<keyof typeof DEFAULT_FILES>('index.html');
   const [output, setOutput] = useState<string[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLivePreview, setIsLivePreview] = useState(true);
@@ -96,9 +90,8 @@ export default function CodingTraining() {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
 
   // Modals state
-  const [isTemplatesModalOpen, setIsTemplatesModalOpen] = useState(false);
-  const [isSavedProjectsModalOpen, setIsSavedProjectsModalOpen] = useState(false);
   const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   // Layout state: collapsible sidebar + mobile pane switching
@@ -135,9 +128,9 @@ export default function CodingTraining() {
     const applyProject = (latest: CodingProject) => {
       if (!latest || !latest.files) return;
       setFiles({
-        'index.html': latest.files['index.html'] || '',
-        'styles.css': latest.files['styles.css'] || '',
-        'script.js': latest.files['script.js'] || ''
+        'index.html': mergeFilesToHtml(latest.files),
+        'styles.css': '',
+        'script.js': ''
       });
       setCurrentProjectTitle(latest.title || 'My Practice Code');
       setCurrentProjectId(latest.id);
@@ -200,8 +193,12 @@ export default function CodingTraining() {
     (async () => {
       try {
         const snap = await getDoc(doc(db, 'admins', emailAddr));
-        if (!cancelled && snap.exists() && (snap.data() as any).mustSetPassword === true) {
-          setForcedPwGate({ email: emailAddr });
+        if (!cancelled && snap.exists()) {
+          if ((snap.data() as any).mustSetPassword === true) {
+            setForcedPwGate({ email: emailAddr });
+          } else {
+            setIsAdminUser(true);
+          }
         }
       } catch {
         // ignore read failures; the gate also applies at sign-in
@@ -311,7 +308,7 @@ export default function CodingTraining() {
 
   // Track edits to indicate unsaved changes
   const handleCodeChange = (newCode: string) => {
-    setFiles(prev => ({ ...prev, [activeFile]: newCode }));
+    setFiles(prev => ({ ...prev, 'index.html': newCode }));
     if (currentStudent && hasExistingCode) {
       setSaveStatus('unsaved');
     }
@@ -367,29 +364,47 @@ export default function CodingTraining() {
   };
 
   // Apply a template
-  const handleSelectTemplate = (template: CodingTemplate) => {
-    setFiles({
-      'index.html': template.files['index.html'] || '',
-      'styles.css': template.files['styles.css'] || '',
-      'script.js': template.files['script.js'] || ''
-    });
-    setActiveFile('index.html');
-    setCurrentProjectTitle(template.title);
-    setCurrentProjectId(`proj_${Date.now()}_${template.id}`);
-    setOutput([`[SYSTEM] Loaded "${template.title}". Ready for editing.`]);
-    setTimeout(runCode, 100);
-  };
 
   // Load a saved project
   const handleLoadProject = (project: CodingProject) => {
-    setFiles(project.files);
+    setFiles({ 'index.html': mergeFilesToHtml(project.files), 'styles.css': '', 'script.js': '' });
     setCurrentProjectTitle(project.title);
     setCurrentProjectId(project.id);
-    setActiveFile('index.html');
     setOutput([`[SYSTEM] Opened project "${project.title}".`]);
     setSaveStatus('saved');
     setLastSavedTime(new Date(project.updatedAt || project.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     setTimeout(runCode, 100);
+  };
+
+  // SAVE WORK button: write the current editor to the cloud immediately
+  const handleSaveNow = async () => {
+    if (!currentStudent) return;
+    if (!files['index.html'].trim()) {
+      setOutput(['[SYSTEM] Nothing to save yet. Write some code first.']);
+      return;
+    }
+    setSaveStatus('saving');
+    const projId = currentProjectId || `proj_${Date.now()}`;
+    if (!currentProjectId) setCurrentProjectId(projId);
+    const project: CodingProject = {
+      id: projId,
+      studentId: currentStudent.studentId,
+      studentName: currentStudent.studentName,
+      studentEmail: currentStudent.studentEmail,
+      title: currentProjectTitle || 'Current Practice Session',
+      files,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    try {
+      await saveCodingProject(project);
+      setSaveStatus('saved');
+      setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      setOutput(['[SYSTEM] Work saved to the cloud.']);
+    } catch (e) {
+      setSaveStatus('unsaved');
+      setOutput(['[ERROR] Could not save. Check your connection and try again.']);
+    }
   };
 
   // Save profile
@@ -425,7 +440,7 @@ export default function CodingTraining() {
   };
 
   const highlight = (code: string) => {
-    const lang = activeFile.endsWith('.html') ? 'markup' : activeFile.endsWith('.css') ? 'css' : 'javascript';
+    const lang = 'markup';
     return Prism.highlight(code, Prism.languages[lang], lang);
   };
 
@@ -476,6 +491,7 @@ export default function CodingTraining() {
         profile={currentStudent}
         onSignOut={handleSignOut}
         onProfileUpdated={handleSaveStudentProfile}
+        isAdmin={isAdminUser}
       />
     );
   }
@@ -591,48 +607,20 @@ export default function CodingTraining() {
           <MessageSquare className="w-3.5 h-3.5 text-[#D4A017] shrink-0" />
           <span className="font-bold text-[#D4A017]">Teacher feedback{teacherFeedback.grade ? ` · Marked ${teacherFeedback.grade}/100` : ''}:</span>
           <span className="text-white/85 truncate">{teacherFeedback.latest}</span>
-          {teacherFeedback.count > 1 && <span className="text-white/40">(+{teacherFeedback.count - 1} more in My Projects)</span>}
+          {teacherFeedback.count > 1 && <span className="text-white/40">(+{teacherFeedback.count - 1} more)</span>}
         </div>
       )}
       <main className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
         {/* LEFT: CODE EDITOR */}
         <div className={`${mobileView === 'code' ? 'flex' : 'hidden'} lg:flex flex-1 min-h-0 min-w-0 flex-col border-b lg:border-b-0 lg:border-r border-white/10 bg-[#050E22]`}>
-          {/* FILE TABS */}
-          <div className="shrink-0 flex items-center justify-between p-2 bg-[#0F2557]/50 border-b border-white/5 overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-1">
-              {(['index.html', 'styles.css', 'script.js'] as const).map((fileName) => {
-                return (
-                  <button
-                    key={fileName}
-                    onClick={() => setActiveFile(fileName)}
-                    className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-[13px] font-medium transition-all cursor-pointer whitespace-nowrap ${
-                      activeFile === fileName 
-                        ? 'bg-white/10 text-[#D4A017] shadow-sm font-semibold' 
-                        : 'text-white/40 hover:text-white/70 hover:bg-white/5'
-                    }`}
-                  >
-                    {fileName.endsWith('.html') && <FileCode className="w-3.5 h-3.5 text-emerald-400" />}
-                    {fileName.endsWith('.css') && <FileText className="w-3.5 h-3.5 text-sky-400" />}
-                    {fileName.endsWith('.js') && <FileJson className="w-3.5 h-3.5 text-amber-400" />}
-                    <span>{fileName}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="text-[10px] text-white/40 font-mono pr-2 hidden md:block">
-              {files[activeFile].length} chars • {files[activeFile].split('\n').length} lines
-            </div>
-          </div>
-
           {/* EDITOR BODY */}
           <div className="flex-1 min-h-0 relative font-mono text-sm overflow-auto scrollbar-thin scrollbar-thumb-white/10">
             <Editor
-              value={files[activeFile]}
+              value={files['index.html']}
               onValueChange={handleCodeChange}
               highlight={highlight}
               padding={16}
-              placeholder={`// ${activeFile} is empty. Write your ${activeFile.endsWith('.html') ? 'HTML markup' : activeFile.endsWith('.css') ? 'CSS styles' : 'JavaScript code'} here, or open the menu for Starter Templates...`}
+              placeholder="<!-- Write your HTML here. You can include <style> and <script> in the same file. -->"
               className="code-editor min-h-full"
               style={{
                 fontFamily: '"Fira Code", "Cascadia Code", "Source Code Pro", monospace',
@@ -676,53 +664,11 @@ export default function CodingTraining() {
                     <div>
                       <h3 className="text-base font-bold text-white">Editor is Empty</h3>
                       <p className="text-xs text-white/60 mt-1 leading-relaxed">
-                        Start writing your code in <span className="text-emerald-400 font-mono">index.html</span>, or pick one of our starter templates to kick off:
+                        Start writing your code, then hit Run to see it live.
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
-                      <button
-                        onClick={() => setIsTemplatesModalOpen(true)}
-                        className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-all cursor-pointer group"
-                      >
-                        <div className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
-                          <FileCode className="w-3 h-3" />
-                          Pure HTML
-                        </div>
-                        <div className="text-[10px] text-white/40 mt-1">No CSS or JS</div>
-                      </button>
-
-                      <button
-                        onClick={() => setIsTemplatesModalOpen(true)}
-                        className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-all cursor-pointer group"
-                      >
-                        <div className="text-[11px] font-bold text-sky-400 flex items-center gap-1">
-                          <FileText className="w-3 h-3" />
-                          HTML + CSS
-                        </div>
-                        <div className="text-[10px] text-white/40 mt-1">Styled Card</div>
-                      </button>
-
-                      <button
-                        onClick={() => setIsTemplatesModalOpen(true)}
-                        className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-all cursor-pointer group"
-                      >
-                        <div className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
-                          <FileJson className="w-3 h-3" />
-                          HTML+CSS+JS
-                        </div>
-                        <div className="text-[10px] text-white/40 mt-1">Interactive App</div>
-                      </button>
                     </div>
-
-                    <button
-                      onClick={() => setIsTemplatesModalOpen(true)}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#D4A017] hover:bg-[#b0820e] text-[#0F2557] font-bold text-xs shadow-lg transition-transform active:scale-95 cursor-pointer"
-                    >
-                      <LayoutTemplate className="w-4 h-4" />
-                      <span>Browse All 3 Templates</span>
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
@@ -822,34 +768,21 @@ export default function CodingTraining() {
                 <div className="space-y-2">
                   <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold px-1">Workspace</p>
                   <button
-                    onClick={() => { setIsDrawerOpen(false); setIsTemplatesModalOpen(true); }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-[#D4A017]/40 text-[#D4A017] font-bold text-xs transition-colors cursor-pointer"
-                  >
-                    <LayoutTemplate className="w-4 h-4" />
-                    <span>Starter Templates</span>
-                    <span className="ml-auto px-1.5 py-0.5 bg-[#D4A017] text-[#0F2557] rounded-full text-[10px]">3</span>
-                  </button>
-                  <button
-                    onClick={() => { setIsDrawerOpen(false); setIsSavedProjectsModalOpen(true); }}
-                    className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium text-xs transition-colors cursor-pointer"
-                  >
-                    <FolderOpen className="w-4 h-4 text-[#D4A017]" />
-                    <span>My Projects</span>
-                  </button>
-                  <button
-                    onClick={() => { setIsDrawerOpen(false); setIsSavedProjectsModalOpen(true); }}
+                    onClick={() => { setIsDrawerOpen(false); handleSaveNow(); }}
                     className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#D4A017] hover:bg-[#b0820e] text-[#0F2557] font-bold text-xs transition-colors cursor-pointer shadow-sm"
                   >
                     <Save className="w-4 h-4" />
                     <span>Save Work</span>
                   </button>
+                  {isAdminUser && (
                   <button
                     onClick={() => { setIsDrawerOpen(false); setIsTeacherModalOpen(true); }}
                     className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium text-xs transition-colors cursor-pointer"
                   >
                     <GraduationCap className="w-4 h-4 text-emerald-400" />
-                    <span>Teacher Monitor</span>
+                    <span>Students Projects</span>
                   </button>
+                  )}
                 </div>
 
                 {/* Editor settings */}
@@ -873,29 +806,11 @@ export default function CodingTraining() {
                     <span>Reset Editor</span>
                   </button>
                 </div>
-
-                {/* Docs */}
-                <div className="space-y-2">
-                  <p className="text-[10px] uppercase tracking-widest text-white/30 font-bold px-1 flex items-center gap-1.5">
-                    <BookOpen className="w-3 h-3 text-[#D4A017]" />
-                    Docs
-                  </p>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <a href="https://developer.mozilla.org/en-US/docs/Web/HTML" target="_blank" rel="noreferrer" onClick={() => setIsDrawerOpen(false)} className="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/70 hover:text-[#D4A017] transition-colors">
-                      HTML <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                    <a href="https://developer.mozilla.org/en-US/docs/Web/CSS" target="_blank" rel="noreferrer" onClick={() => setIsDrawerOpen(false)} className="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/70 hover:text-[#D4A017] transition-colors">
-                      CSS <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank" rel="noreferrer" onClick={() => setIsDrawerOpen(false)} className="flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/70 hover:text-[#D4A017] transition-colors">
-                      JS <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                  </div>
-                </div>
               </div>
 
               {/* Sidebar footer */}
               <div className="shrink-0 p-4 border-t border-white/10 space-y-2.5">
+                {isAdminUser && (
                 <button
                   onClick={() => { setIsDrawerOpen(false); handleSwitchTrack('graphics'); }}
                   className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-[#D4A017]/40 text-[#D4A017] font-semibold transition-colors cursor-pointer text-xs"
@@ -904,6 +819,7 @@ export default function CodingTraining() {
                   <Palette className="w-3.5 h-3.5" />
                   <span>Switch to Graphics Studio</span>
                 </button>
+                )}
                 <button
                   onClick={() => setShowExitConfirm(true)}
                   className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 hover:text-rose-100 font-semibold transition-colors cursor-pointer text-xs"
@@ -922,23 +838,6 @@ export default function CodingTraining() {
       </AnimatePresence>
 
       {/* MODALS */}
-      <CodingTemplatesModal
-        isOpen={isTemplatesModalOpen}
-        onClose={() => setIsTemplatesModalOpen(false)}
-        onSelectTemplate={handleSelectTemplate}
-        hasExistingCode={hasExistingCode}
-      />
-
-      <SavedProjectsModal
-        isOpen={isSavedProjectsModalOpen}
-        onClose={() => setIsSavedProjectsModalOpen(false)}
-        currentStudent={currentStudent}
-        currentFiles={files}
-        onLoadProject={handleLoadProject}
-        onRequireAuth={() => {
-          setIsSavedProjectsModalOpen(false);
-        }}
-      />
 
       <TeacherMonitorModal
         isOpen={isTeacherModalOpen}

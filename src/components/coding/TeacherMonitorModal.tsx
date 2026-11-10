@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { CodingProject, CodingStudentProfile } from '../../types';
 import { fetchAllCodingProjects, fetchAllStudents, resetStudentPin } from '../../lib/firebaseService';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 interface TeacherMonitorModalProps {
   isOpen: boolean;
@@ -42,12 +44,17 @@ export default function TeacherMonitorModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [inspectedProject, setInspectedProject] = useState<CodingProject | null>(null);
-  const [inspectTab, setInspectTab] = useState<'preview' | 'html' | 'css' | 'js'>('preview');
+  const [markInput, setMarkInput] = useState('');
+  const [markMsg, setMarkMsg] = useState('');
 
   // Teacher PIN reset state
   const [newPinInput, setNewPinInput] = useState('');
   const [isResettingPin, setIsResettingPin] = useState(false);
   const [pinResetSuccess, setPinResetSuccess] = useState(false);
+
+  useEffect(() => {
+    setMarkInput(inspectedProject?.grade || '');
+  }, [inspectedProject]);
 
   const loadAllData = async () => {
     setLoading(true);
@@ -198,6 +205,26 @@ export default function TeacherMonitorModal({
     }
   };
 
+  // Award / update a mark for the inspected project
+  const saveMark = async () => {
+    if (!inspectedProject) return;
+    const g = markInput.trim();
+    if (g && (!/^\d{1,3}$/.test(g) || Number(g) > 100)) {
+      alert('Enter a score from 0 to 100, or clear the field to unmark.');
+      return;
+    }
+    try {
+      await setDoc(doc(db, 'coding_projects', inspectedProject.id), { grade: g }, { merge: true });
+      const updated = { ...inspectedProject, grade: g || undefined } as CodingProject;
+      setInspectedProject(updated);
+      setProjects((prev) => prev.map((pp) => (pp.id === updated.id ? updated : pp)));
+      setMarkMsg(g ? `Mark saved: ${g}/100` : 'Mark cleared');
+      setTimeout(() => setMarkMsg(''), 2500);
+    } catch (e: any) {
+      alert(e?.message || 'Failed to save the mark.');
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -216,13 +243,13 @@ export default function TeacherMonitorModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold">Teacher Class Monitor & Review Hub</h2>
+                <h2 className="text-base font-bold">Students Projects</h2>
                 <span className="text-[10px] bg-white/10 text-white/80 px-2 py-0.5 rounded-full font-mono">
                   Live Firestore Database
                 </span>
               </div>
               <p className="text-xs text-white/60">
-                Monitor student accounts, inspect individual coding assignments, and track class progress
+                Every project students have submitted, with the date it was saved and their mark
               </p>
             </div>
           </div>
@@ -483,40 +510,22 @@ export default function TeacherMonitorModal({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Tabs */}
-                    <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/10 text-xs">
+                    {/* Mark */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[10px] text-white/50 font-semibold hidden sm:inline">Mark</span>
+                      <input
+                        value={markInput}
+                        onChange={(e) => setMarkInput(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="0-100"
+                        className="w-16 px-2 py-1.5 rounded-lg bg-black/40 border border-white/15 text-xs text-white text-center focus:outline-none focus:border-[#D4A017]"
+                      />
                       <button
-                        onClick={() => setInspectTab('preview')}
-                        className={`px-3 py-1 rounded-md font-bold transition-all cursor-pointer ${
-                          inspectTab === 'preview' ? 'bg-[#D4A017] text-[#0F2557]' : 'text-white/60 hover:text-white'
-                        }`}
+                        onClick={saveMark}
+                        className="px-2.5 py-1.5 rounded-lg bg-[#D4A017] hover:bg-[#e5b31f] text-[#0F2557] text-xs font-bold transition-colors cursor-pointer"
                       >
-                        Live Webpage
+                        Save mark
                       </button>
-                      <button
-                        onClick={() => setInspectTab('html')}
-                        className={`px-2.5 py-1 rounded-md font-mono text-[11px] transition-all cursor-pointer ${
-                          inspectTab === 'html' ? 'bg-[#D4A017] text-[#0F2557] font-bold' : 'text-white/60 hover:text-white'
-                        }`}
-                      >
-                        HTML
-                      </button>
-                      <button
-                        onClick={() => setInspectTab('css')}
-                        className={`px-2.5 py-1 rounded-md font-mono text-[11px] transition-all cursor-pointer ${
-                          inspectTab === 'css' ? 'bg-[#D4A017] text-[#0F2557] font-bold' : 'text-white/60 hover:text-white'
-                        }`}
-                      >
-                        CSS
-                      </button>
-                      <button
-                        onClick={() => setInspectTab('js')}
-                        className={`px-2.5 py-1 rounded-md font-mono text-[11px] transition-all cursor-pointer ${
-                          inspectTab === 'js' ? 'bg-[#D4A017] text-[#0F2557] font-bold' : 'text-white/60 hover:text-white'
-                        }`}
-                      >
-                        JS
-                      </button>
+                      {markMsg && <span className="text-[10px] text-emerald-400">{markMsg}</span>}
                     </div>
 
                     {/* Load Into Workspace */}
@@ -536,7 +545,7 @@ export default function TeacherMonitorModal({
 
                 {/* INSPECTOR CONTENT */}
                 <div className="flex-1 overflow-hidden relative">
-                  {inspectTab === 'preview' ? (
+                  (
                     <div className="w-full h-full bg-white">
                       <iframe
                         srcDoc={inspectedPreviewHtml}
@@ -545,17 +554,7 @@ export default function TeacherMonitorModal({
                         className="w-full h-full border-none"
                       />
                     </div>
-                  ) : (
-                    <div className="w-full h-full p-4 overflow-auto font-mono text-xs bg-[#0b1329] text-slate-200">
-                      <pre className="whitespace-pre-wrap leading-relaxed">
-                        {inspectTab === 'html'
-                          ? inspectedProject.files['index.html'] || '(Empty index.html)'
-                          : inspectTab === 'css'
-                          ? inspectedProject.files['styles.css'] || '(Empty styles.css)'
-                          : inspectedProject.files['script.js'] || '(Empty script.js)'}
-                      </pre>
-                    </div>
-                  )}
+                  )
                 </div>
               </>
             )}
