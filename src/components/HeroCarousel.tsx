@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Calendar, ChevronDown } from 'lucide-react';
+import { Calendar, ChevronDown, GraduationCap } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { CAROUSEL_IMAGES } from '../data';
 import { subscribeSchoolLogo, subscribeActiveBannerEvent, subscribePhotos } from '../lib/firebaseService';
 import { Photo } from '../types';
@@ -198,9 +199,19 @@ export default function HeroCarousel({ targetDate, onViewAlbumClick }: HeroCarou
             <p className="text-[#D4A017] font-mono text-[9px] tracking-widest uppercase">Class of 2026</p>
           </div>
         </div>
-        <div className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-1.5 rounded-full text-white/80 text-xs font-medium">
-          <Calendar className="w-3.5 h-3.5 text-[#D4A017]" />
-          <span>July 31, 2026 • End of Session</span>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/coding-training"
+            className="flex items-center gap-1.5 bg-[#D4A017] hover:bg-[#b0820e] text-[#0F2557] px-3.5 py-1.5 rounded-full text-xs font-bold shadow-md transition-all shrink-0"
+            title="Open the Coding & Graphics program"
+          >
+            <GraduationCap className="w-3.5 h-3.5" />
+            <span>Coding &amp; Graphics</span>
+          </Link>
+          <div className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-1.5 rounded-full text-white/80 text-xs font-medium">
+            <Calendar className="w-3.5 h-3.5 text-[#D4A017]" />
+            <span>July 31, 2026 • End of Session</span>
+          </div>
         </div>
       </div>
 

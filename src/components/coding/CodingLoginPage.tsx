@@ -423,6 +423,7 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
                         </button>
                       )}
                     </div>
+                    {!(subAction === 'signin' && forgotPw) && (
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -442,6 +443,7 @@ export default function CodingLoginPage({ onLoginSuccess }: CodingLoginPageProps
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
+                    )}
                   </div>
 
                   {subAction === 'register' && (
